@@ -2,6 +2,7 @@
 
 import { EPISODE_LABEL, STATUS_COLOR, formatAgo, formatDistance, formatTime } from "@/lib/format";
 import type { Assignment, Episode, EpisodeType, Fix } from "@/lib/types";
+import { DirectionsIcon } from "./Icons";
 import StatusGlyph from "./StatusGlyph";
 
 /** The tint follows severity, and only while the alert is unacknowledged. */
@@ -18,6 +19,11 @@ function whereText(alert: Episode, fix: Fix | undefined, now: number): string {
   if (!fix) return "Belum ada posisi";
   if (alert.type === "signal_lost") return `Posisi terakhir ${formatAgo(fix.recordedAt, now)}`;
   return formatDistance(fix.distanceOutsideMeters) ?? "Kembali ke dalam zona";
+}
+
+/** Google Maps wants lat,lng here, unlike GeoJSON. */
+function directionsUrl(fix: Fix): string {
+  return `https://www.google.com/maps/search/?api=1&query=${fix.lat},${fix.lng}`;
 }
 
 interface Props {
@@ -49,62 +55,74 @@ export default function AlertList({
   );
 
   if (sorted.length === 0) {
-    return <p className="px-4 py-4 text-base text-ink-soft">Tidak ada yang perlu ditangani.</p>;
+    return <p className="px-4 py-4 text-sm text-ink-soft">Tidak ada yang perlu ditangani.</p>;
   }
 
   return (
-    <ul className="divide-y divide-line">
+    <ul className="space-y-2 p-2">
       {sorted.map((alert) => {
         const assignment = assignmentByBracelet.get(alert.braceletId);
+        const fix = fixes[alert.braceletId];
         const unacknowledged = alert.acknowledgedAt === null;
         const selected = alert.braceletId === selectedBraceletId;
         return (
           <li
             key={alert.id}
-            className={`px-4 py-3 ${unacknowledged ? UNSEEN_TINT[alert.type] : ""} ${
-              selected ? "shadow-[inset_4px_0_0_var(--color-ink)]" : ""
+            className={`rounded-xl p-3 ${unacknowledged ? UNSEEN_TINT[alert.type] : "border border-line"} ${
+              selected ? "ring-2 ring-ink" : ""
             }`}
           >
             <button
               type="button"
               onClick={() => onSelect(alert.braceletId)}
-              className="flex w-full gap-3 text-left"
+              className="flex w-full gap-2.5 rounded-lg text-left"
             >
               <span className="pt-0.5">
-                <StatusGlyph status={alert.type} size={26} />
+                <StatusGlyph status={alert.type} size={24} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">
-                  <span className="text-lg font-bold" style={{ color: STATUS_COLOR[alert.type] }}>
+                  <span className="font-bold" style={{ color: STATUS_COLOR[alert.type] }}>
                     {EPISODE_LABEL[alert.type]}
                   </span>
-                  <span className="text-sm text-ink-soft tabular-nums">#{alert.id}</span>
+                  <span className="text-xs text-ink-soft tabular-nums">#{alert.id}</span>
                 </span>
-                <span className="block text-base font-semibold text-ink">
+                <span className="block text-sm font-semibold text-ink">
                   {alert.deviceLabel ?? `Gelang ${alert.braceletId}`}
                   {assignment && `, ${assignment.inmateName}`}
                 </span>
-                <span className="block text-base text-ink">
-                  {whereText(alert, fixes[alert.braceletId], now)}
-                </span>
-                <span className="block text-sm text-ink-soft tabular-nums">
+                <span className="block text-sm text-ink">{whereText(alert, fix, now)}</span>
+                <span className="block text-xs text-ink-soft tabular-nums">
                   Mulai {formatTime(alert.triggeredAt)} ({formatAgo(alert.triggeredAt, now)})
                 </span>
               </span>
             </button>
-            {unacknowledged ? (
-              <button
-                type="button"
-                onClick={() => onAcknowledge(alert.id)}
-                className="mt-2 ml-[38px] min-h-10 rounded bg-ink px-3 text-sm font-semibold text-white hover:bg-ink-soft"
-              >
-                Tandai sudah dilihat
-              </button>
-            ) : (
-              <p className="mt-1 ml-[38px] text-sm text-ink-soft tabular-nums">
-                Dilihat {formatTime(alert.acknowledgedAt as string)}
-              </p>
-            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {unacknowledged ? (
+                <button
+                  type="button"
+                  onClick={() => onAcknowledge(alert.id)}
+                  className="min-h-10 rounded-full bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark"
+                >
+                  Tandai sudah dilihat
+                </button>
+              ) : (
+                <span className="text-xs text-ink-soft tabular-nums">
+                  Dilihat {formatTime(alert.acknowledgedAt as string)}
+                </span>
+              )}
+              {fix && (
+                <a
+                  href={directionsUrl(fix)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-brand bg-white px-3 text-sm font-semibold text-brand hover:bg-ground"
+                >
+                  <DirectionsIcon size={18} />
+                  {alert.type === "signal_lost" ? "Ke posisi terakhir" : "Petunjuk arah"}
+                </a>
+              )}
+            </div>
           </li>
         );
       })}

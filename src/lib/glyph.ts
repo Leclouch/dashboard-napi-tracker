@@ -23,7 +23,9 @@ export function glyphAttrs(status: DisplayStatus): GlyphAttrs {
     case "alert":
       return { d: DIAMOND, fill: color, stroke: "#ffffff", strokeWidth: 1.5 };
     case "warn":
-      return { d: TRIANGLE, fill: color, stroke: "#ffffff", strokeWidth: 1.5 };
+      // Brighter than the text colour: the dark amber nearly matches red with red-green colour
+      // blindness (colour difference 3); this one stays clearly apart (48).
+      return { d: TRIANGLE, fill: "#fbbf24", stroke: color, strokeWidth: 1.5 };
     case "signal_lost":
       // Hollow and dashed: this is where the bracelet was, not where it is.
       return { d: CIRCLE, fill: "#ffffff", stroke: color, strokeWidth: 3.5, strokeDasharray: "5 3" };

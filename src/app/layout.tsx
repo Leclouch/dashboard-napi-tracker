@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible_Next } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
+import App from "@/components/App";
 import "./globals.css";
 
-// Drawn for low-vision readers: l, 1 and I stay distinct, which labels like "prototype-1" need.
-const bodyFont = Atkinson_Hyperlegible_Next({
+const bodyFont = Plus_Jakarta_Sans({
   variable: "--font-body",
   subsets: ["latin"],
 });
@@ -21,7 +21,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="id"
       className={`${bodyFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <App>{children}</App>
+      </body>
     </html>
   );
 }

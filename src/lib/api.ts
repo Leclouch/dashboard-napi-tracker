@@ -1,4 +1,4 @@
-import type { Assignment, Episode, Fix, Zone } from "./types";
+import type { Assignment, Bracelet, Episode, Fix, NewAssignment, Person, Zone } from "./types";
 
 /**
  * Backend base URL. NEXT_PUBLIC_ variables are baked in at build time (see .env.example).
@@ -19,12 +19,16 @@ export class ApiError extends Error {
 export class Api {
   constructor(private readonly apiKey: string) {}
 
-  private async request<T>(method: "GET" | "POST", path: string): Promise<T> {
+  private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
     let response: Response;
     try {
       response = await fetch(`${API_URL}${path}`, {
         method,
-        headers: { "x-api-key": this.apiKey },
+        headers: {
+          "x-api-key": this.apiKey,
+          ...(body === undefined ? {} : { "content-type": "application/json" }),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
         cache: "no-store",
       });
     } catch {
@@ -60,5 +64,25 @@ export class Api {
 
   acknowledge(alertId: number): Promise<Episode> {
     return this.request("POST", `/alerts/${alertId}/acknowledge`);
+  }
+
+  bracelets(): Promise<Bracelet[]> {
+    return this.request("GET", "/bracelets");
+  }
+
+  inmates(): Promise<Person[]> {
+    return this.request("GET", "/inmates");
+  }
+
+  guards(): Promise<Person[]> {
+    return this.request("GET", "/guards");
+  }
+
+  startAssignment(input: NewAssignment): Promise<Assignment> {
+    return this.request("POST", "/assignments", input);
+  }
+
+  endAssignment(assignmentId: number): Promise<Assignment> {
+    return this.request("POST", `/assignments/${assignmentId}/end`);
   }
 }

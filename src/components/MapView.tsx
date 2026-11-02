@@ -1,10 +1,11 @@
 "use client";
 
-// Leaflet touches `window`, so this file is only loaded in the browser (see Dashboard: ssr false).
+// Leaflet touches `window`, so this file is only loaded in the browser (see AppShell: ssr false).
 import "leaflet/dist/leaflet.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { divIcon, latLngBounds, type DivIcon, type LatLngTuple } from "leaflet";
 import {
+  AttributionControl,
   LayerGroup,
   LayersControl,
   MapContainer,
@@ -12,18 +13,52 @@ import {
   Polygon,
   TileLayer,
   Tooltip,
+  ZoomControl,
   useMap,
   useMapEvents,
 } from "react-leaflet";
 import { FIX_STATUS_LABEL, EPISODE_LABEL, formatAgo, formatDistance } from "@/lib/format";
 import { glyphSvg } from "@/lib/glyph";
 import type { DisplayStatus, Selection } from "@/lib/status";
-import type { Episode, Fix, Zone } from "@/lib/types";
+import type { Assignment, Episode, Fix, Zone } from "@/lib/types";
 
 /** Placeholder until zones load: around Lapas Cebongan. */
 const DEFAULT_CENTER: LatLngTuple = [-7.74, 110.3423];
 /** Close enough to tell which side of the fence a bracelet is on. */
 const SELECTED_MIN_ZOOM = 18;
+
+const STREET = "Peta jalan";
+const SATELLITE = "Satelit";
+const LAYER_KEY = "gelang.mapLayer";
+
+/** The chosen layer is a per-viewer convenience; losing it only means back to the street map. */
+function readLayer(): string {
+  try {
+    return localStorage.getItem(LAYER_KEY) === SATELLITE ? SATELLITE : STREET;
+  } catch {
+    return STREET;
+  }
+}
+
+function writeLayer(name: string): void {
+  try {
+    localStorage.setItem(LAYER_KEY, name);
+  } catch {
+    // Not remembered, nothing else depends on it.
+  }
+}
+
+/**
+ * The parts of the map hidden behind floating panels, in pixels. Keep in step with AppShell's
+ * panel width and PhoneSheet's half height, so bracelets land in the part staff can see.
+ */
+function coveredEdges(map: { getSize(): { y: number } }) {
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    return { top: 0, right: 392, bottom: 0, left: 0 };
+  }
+  const sheetHalf = map.getSize().y * 0.42;
+  return { top: 136, right: 0, bottom: sheetHalf + 64, left: 0 };
+}
 
 /** GeoJSON ring [lng, lat] -> Leaflet [lat, lng]. Never swap these elsewhere. */
 function ringToLatLngs(ring: [number, number][]): LatLngTuple[] {
@@ -57,7 +92,12 @@ function FitToZones({ zones }: { zones: Zone[] }) {
   useEffect(() => {
     if (done.current || zones.length === 0) return;
     const bounds = latLngBounds(zones.flatMap((z) => ringToLatLngs(z.boundary.coordinates[0])));
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+    const covered = coveredEdges(map);
+    map.fitBounds(bounds, {
+      paddingTopLeft: [covered.left + 40, covered.top + 40],
+      paddingBottomRight: [covered.right + 40, covered.bottom + 40],
+      maxZoom: 18,
+    });
     done.current = true;
   }, [map, zones]);
   return null;
@@ -75,17 +115,26 @@ function FlyToSelection({ selection, fixes }: { selection: Selection | null; fix
     if (!selection) return;
     const fix = fixesRef.current.find((f) => f.braceletId === selection.braceletId);
     if (!fix) return;
+    const zoom = Math.max(map.getZoom(), SELECTED_MIN_ZOOM);
+    const covered = coveredEdges(map);
+    // Aim past the bracelet by half the covered width, so it lands in the middle of what's visible.
+    const target = map.unproject(
+      map
+        .project([fix.lat, fix.lng], zoom)
+        .add([(covered.right - covered.left) / 2, (covered.bottom - covered.top) / 2]),
+      zoom,
+    );
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    map.flyTo([fix.lat, fix.lng], Math.max(map.getZoom(), SELECTED_MIN_ZOOM), {
-      animate: !reducedMotion,
-      duration: 0.6,
-    });
+    map.flyTo(target, zoom, { animate: !reducedMotion, duration: 0.6 });
   }, [map, selection]);
   return null;
 }
 
-function ClearSelectionOnMapClick({ onClear }: { onClear: () => void }) {
-  useMapEvents({ click: onClear });
+function MapEvents({ onClear }: { onClear: () => void }) {
+  useMapEvents({
+    click: onClear,
+    baselayerchange: (event) => writeLayer(event.name),
+  });
   return null;
 }
 
@@ -93,6 +142,7 @@ interface Props {
   zones: Zone[];
   fixes: Fix[];
   openAlerts: Episode[];
+  assignments: Assignment[];
   now: number;
   selection: Selection | null;
   onSelect: (braceletId: number) => void;
@@ -103,24 +153,36 @@ export default function MapView({
   zones,
   fixes,
   openAlerts,
+  assignments,
   now,
   selection,
   onSelect,
   onClearSelection,
 }: Props) {
+  const [initialLayer] = useState(readLayer);
   const alertByBracelet = new Map(openAlerts.map((a) => [a.braceletId, a]));
+  const assignedBracelets = new Set(assignments.map((a) => a.braceletId));
 
   return (
-    <MapContainer center={DEFAULT_CENTER} zoom={17} className="h-full w-full">
-      <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="Peta jalan">
+    <MapContainer
+      center={DEFAULT_CENTER}
+      zoom={17}
+      className="h-full w-full"
+      zoomControl={false}
+      attributionControl={false}
+    >
+      <AttributionControl position="bottomleft" />
+      <ZoomControl position="bottomleft" />
+      <LayersControl position="bottomleft">
+        <LayersControl.BaseLayer checked={initialLayer === STREET} name={STREET}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            className="tile-muted"
             maxZoom={19}
           />
         </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="Satelit">
+        <LayersControl.BaseLayer checked={initialLayer === SATELLITE} name={SATELLITE}>
           <LayerGroup>
             <TileLayer
               attribution="Tiles &copy; Esri"
@@ -137,13 +199,14 @@ export default function MapView({
 
       <FitToZones zones={zones} />
       <FlyToSelection selection={selection} fixes={fixes} />
-      <ClearSelectionOnMapClick onClear={onClearSelection} />
+      <MapEvents onClear={onClearSelection} />
 
       {zones.map((zone) => (
         <Polygon
           key={zone.id}
           positions={ringToLatLngs(zone.boundary.coordinates[0])}
-          pathOptions={{ color: "#14233b", weight: 2, fillOpacity: 0.06 }}
+          // Neutral on purpose: on the map, blue must not read as a status.
+          pathOptions={{ color: "#4a5a75", weight: 2, fillOpacity: 0.07 }}
         >
           <Tooltip sticky className="bracelet-tooltip">
             {zone.name}
@@ -153,10 +216,13 @@ export default function MapView({
 
       {fixes.map((fix) => {
         const alert = alertByBracelet.get(fix.braceletId);
-        const status: DisplayStatus = alert?.type ?? fix.status;
-        const statusText = alert ? EPISODE_LABEL[alert.type] : FIX_STATUS_LABEL[fix.status];
+        // A bracelet that isn't handed out keeps its last fix, which may date from an old
+        // assignment. Showing that fix's status would put a false red marker on the map.
+        const fixStatus = assignedBracelets.has(fix.braceletId) ? fix.status : "unassigned";
+        const status: DisplayStatus = alert?.type ?? fixStatus;
+        const statusText = alert ? EPISODE_LABEL[alert.type] : FIX_STATUS_LABEL[fixStatus];
         const selected = fix.braceletId === selection?.braceletId;
-        const distance = formatDistance(fix.distanceOutsideMeters);
+        const distance = fixStatus === "unassigned" ? null : formatDistance(fix.distanceOutsideMeters);
         // Only the selected bracelet keeps its label open: inmates work close together, and
         // permanent labels hide each other and the markers. Inmate names stay in the side panel.
         return (

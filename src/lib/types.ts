@@ -62,6 +62,30 @@ export interface Assignment {
   endedAt: string | null;
 }
 
+export interface NewAssignment {
+  braceletId: number;
+  inmateId: number;
+  guardId: number;
+  zoneId: number;
+}
+
+export interface Bracelet {
+  id: number;
+  deviceLabel: string;
+  status: string;
+  createdAt: string;
+  openAssignmentId: number | null;
+  lastFixAt: string | null;
+}
+
+/** An inmate or a guard; both have the same shape in the backend. */
+export interface Person {
+  id: number;
+  name: string;
+  status: string;
+  createdAt: string;
+}
+
 /** GeoJSON Polygon: coordinates are [lng, lat]. Leaflet wants [lat, lng]. */
 export interface Zone {
   id: number;

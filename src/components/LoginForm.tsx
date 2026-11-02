@@ -33,10 +33,10 @@ export default function LoginForm() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-ink p-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded bg-white p-6">
+    <main className="flex flex-1 items-center justify-center bg-brand p-4">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Gelang GPS</h1>
+          <h1 className="text-2xl font-extrabold text-brand">Gelang GPS</h1>
           <p className="text-base text-ink-soft">Pemantauan warga binaan, Lapas Cebongan</p>
         </div>
         <label className="block text-base font-medium text-ink">
@@ -46,7 +46,7 @@ export default function LoginForm() {
             autoComplete="current-password"
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            className="mt-1 block w-full rounded border border-ink-soft px-3 py-2 text-ink"
+            className="mt-1 block h-12 w-full rounded-xl border border-ink-soft px-3 text-ink"
             autoFocus
           />
         </label>
@@ -54,7 +54,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={busy || !key.trim()}
-          className="min-h-11 w-full rounded bg-ink px-3 font-semibold text-white hover:bg-ink-soft disabled:opacity-50"
+          className="min-h-12 w-full rounded-full bg-brand px-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
         >
           {busy ? "Memeriksa…" : "Masuk"}
         </button>

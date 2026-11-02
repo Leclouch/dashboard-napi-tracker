@@ -1,6 +1,6 @@
 "use client";
 
-import { EPISODE_LABEL, FIX_STATUS_LABEL, formatAgo, formatDateTime } from "@/lib/format";
+import { EPISODE_LABEL, FIX_STATUS_LABEL, formatAgo } from "@/lib/format";
 import { displayStatus, severityRank } from "@/lib/status";
 import type { Assignment, Episode, Fix } from "@/lib/types";
 import StatusGlyph from "./StatusGlyph";
@@ -24,7 +24,7 @@ export default function AssignmentList({
   onSelect,
 }: Props) {
   if (assignments.length === 0) {
-    return <p className="px-4 py-4 text-base text-ink-soft">Tidak ada gelang yang sedang dipakai.</p>;
+    return <p className="px-4 py-4 text-sm text-ink-soft">Tidak ada gelang yang sedang dipakai.</p>;
   }
 
   const alertByBracelet = new Map(alerts.map((a) => [a.braceletId, a]));
@@ -45,29 +45,22 @@ export default function AssignmentList({
             <button
               type="button"
               onClick={() => onSelect(assignment.braceletId)}
-              className={`block w-full px-4 py-2 text-left hover:bg-ground ${selected ? "bg-selected" : ""}`}
+              className={`flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-ground ${
+                selected ? "bg-selected" : ""
+              }`}
             >
-              <span className="flex items-baseline justify-between gap-2">
-                <span className="text-base font-semibold text-ink">{assignment.inmateName}</span>
-                <span className="text-sm text-ink-soft">{assignment.deviceLabel}</span>
+              {status ? <StatusGlyph status={status} size={20} /> : <span className="w-5" />}
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-sm font-bold text-ink">{assignment.inmateName}</span>
+                  <span className="text-xs text-ink-soft">{assignment.deviceLabel}</span>
+                </span>
+                <span className="block text-sm text-ink-soft">
+                  {status && fix
+                    ? `${alert ? EPISODE_LABEL[alert.type] : FIX_STATUS_LABEL[fix.status]}, ${formatAgo(fix.recordedAt, now)}`
+                    : "Belum ada posisi"}
+                </span>
               </span>
-              <span className="mt-0.5 flex items-center gap-2 text-sm text-ink">
-                {status && fix ? (
-                  <>
-                    <StatusGlyph status={status} />
-                    <span>
-                      {alert ? EPISODE_LABEL[alert.type] : FIX_STATUS_LABEL[fix.status]},{" "}
-                      {formatAgo(fix.recordedAt, now)}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-ink-soft">Belum ada posisi</span>
-                )}
-              </span>
-              <span className="block text-sm text-ink-soft">
-                Zona {assignment.zoneName}, petugas {assignment.guardName}
-              </span>
-              <span className="block text-sm text-ink-soft">Mulai {formatDateTime(assignment.startedAt)}</span>
             </button>
           </li>
         );

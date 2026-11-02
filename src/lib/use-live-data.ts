@@ -147,5 +147,5 @@ export function useLiveData(apiKey: string, onUnauthorized: () => void) {
     [api, fail],
   );
 
-  return { ...data, acknowledge };
+  return { ...data, api, acknowledge, reloadAssignments };
 }

@@ -20,13 +20,25 @@ so explain what you change and why.
 - Leaflet only in `src/components/MapView.tsx`, loaded with next/dynamic `ssr: false`.
   GeoJSON is [lng, lat]; Leaflet is [lat, lng]; convert only in ringToLatLngs.
 - Response types in `src/lib/types.ts` mirror the backend; update both together.
+- App structure: `AppShell` sits above all pages (mounted by `App` in the root layout) and owns the
+  map, live data, alarm and selection, shared through `useShell()` (`src/lib/live-context.ts`). Pages
+  only add a sheet over the map, so status and alerts stay visible and the map keeps its view.
+- Look: Gojek-inspired layout and shapes, plain serious wording, no illustrations, not its branding.
+  Brand blue #0046a8 matches Gojek green's saturation and lightness; keep it off the map, because it
+  sits close to signal-lost purple. Warn markers use amber #fbbf24, text keeps the darker amber.
 - Status display: `src/lib/status.ts` holds the pure rules (open episode beats latest fix, tally, the
-  band headline; offline or failed data always beats a calm headline). Every status has its own
+  card headline; offline or failed data always beats a calm headline). Every status has its own
   shape from `src/lib/glyph.ts`, shared by the lists and the map, so status never relies on colour.
+  The status card fills red only for an unacknowledged out-of-zone alert.
+- Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
+  the page exists.
 - Alarm (`src/lib/use-alarm.ts`): Web Audio beep, no sound file. Alert and signal_lost repeat every
   15 s until acknowledged, warn sounds once. If the browser blocks audio the header says so.
 - Inmate names stay off the map (side panel only) until the facility approves, like Telegram's
-  TELEGRAM_INCLUDE_NAMES. Font: Atkinson Hyperlegible Next, for labels read at a distance.
+  TELEGRAM_INCLUDE_NAMES. Font: Plus Jakarta Sans.
+- Restart `npm run dev` after editing `globals.css`: with the custom Tailwind loader in
+  next.config.ts, the dev server keeps serving the old stylesheet (seen 2026-11-02). If new styles
+  are missing or white text disappears, check this first.
 - Dev port 3001 (backend is 3000). `turbopack.root` is pinned because of a stray D:\yarn.lock.
 
 ## Rules

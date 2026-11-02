@@ -31,11 +31,15 @@ until staff accounts exist.
 
 | Path | Contents |
 |---|---|
-| `src/app/` | Layout and the single page |
-| `src/components/App.tsx` | Login form or dashboard, depending on the stored key |
-| `src/components/Dashboard.tsx` | Status band, map, alert and assignment panels |
-| `src/components/StatusBand.tsx` | The headline band, status counts, sound and logout |
+| `src/app/` | Root layout, Pemantauan (`/`) and Penugasan (`/penugasan`) |
+| `src/components/App.tsx` | Login form or the app, depending on the stored key |
+| `src/components/AppShell.tsx` | Full-screen map, navbar and panels, shared by every page |
+| `src/components/NavBar.tsx` | Floating bar on desktop, bottom tabs on phones |
+| `src/components/StatusCard.tsx` | The status headline and counts |
+| `src/components/ListPanel.tsx`, `PhoneSheet.tsx` | Alert and bracelet lists, and the phone sheet |
+| `src/components/AssignmentsSheet.tsx` | Start and end assignments |
 | `src/components/MapView.tsx` | Leaflet map (client only, loaded with `ssr: false`) |
+| `src/lib/live-context.ts` | Shared state for the pages (`useShell`) |
 | `src/lib/status.ts`, `glyph.ts` | Status rules (tally, headline) and the shape for each status |
 | `src/lib/use-alarm.ts` | Alarm sound for new alerts |
 | `src/lib/use-live-data.ts` | REST snapshot + Socket.IO updates |
