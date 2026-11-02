@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* A control-room screen: one light theme, so map tiles and status colours always read the same. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-body);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ink: #14233b;
+  --color-ink-soft: #46546a;
+  --color-line: #d5dbe5;
+  --color-ground: #eef1f5;
+  --color-selected: #e3eaf5;
+
+  --color-alert-tint: #fde8e6;
+  --color-warn-tint: #fdf0d5;
+  --color-signal-tint: #eee8fc;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+}
+
+:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+/* The status band pulses only while an out-of-zone alert is unacknowledged. */
+@keyframes band-pulse {
+  50% {
+    background-color: #7f1212;
+  }
+}
+
+.band-pulse {
+  animation: band-pulse 1.6s ease-in-out infinite;
+}
+
+/* Hazard stripes: the band's way of saying "don't trust what is on this screen". */
+.band-offline {
+  background-color: #2b3240;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 18px,
+    rgb(255 255 255 / 0.07) 18px 36px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .band-pulse {
+    animation: none;
+  }
+}
+
+.bracelet-marker {
+  background: none;
+  border: none;
+}
+
+.bracelet-marker svg {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgb(20 35 59 / 0.45));
+}
+
+.bracelet-marker.is-selected {
+  border-radius: 50%;
+  outline: 3px solid var(--color-ink);
+  outline-offset: 4px;
+}
+
+.leaflet-tooltip.bracelet-tooltip {
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.3;
 }
