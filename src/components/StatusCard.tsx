@@ -11,7 +11,7 @@ const STRIP_CLASS: Record<BandTone, string> = {
   calm: "bg-[#15803d]",
   idle: "bg-[#8a97ab]",
   warn: "bg-[#fbbf24]",
-  signal: "bg-[#6d28d9]",
+  signal: "bg-[#5b6472]",
   alert: "bg-[#b91c1c]",
   offline: "bg-[#2b3240]",
 };

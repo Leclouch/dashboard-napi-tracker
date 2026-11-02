@@ -24,11 +24,14 @@ so explain what you change and why.
   map, live data, alarm and selection, shared through `useShell()` (`src/lib/live-context.ts`). Pages
   only add a sheet over the map, so status and alerts stay visible and the map keeps its view.
 - Look: Gojek-inspired layout and shapes, plain serious wording, no illustrations, not its branding.
-  Brand blue #0046a8 matches Gojek green's saturation and lightness; keep it off the map, because it
-  sits close to signal-lost purple. Warn markers use amber #fbbf24, text keeps the darker amber.
+  Brand blue #0046a8 matches Gojek green's saturation and lightness; keep it off the map, because
+  blue isn't a status. Warn dots use amber #fbbf24, text keeps the darker amber.
 - Status display: `src/lib/status.ts` holds the pure rules (open episode beats latest fix, tally, the
-  card headline; offline or failed data always beats a calm headline). Every status has its own
-  shape from `src/lib/glyph.ts`, shared by the lists and the map, so status never relies on colour.
+  card headline; offline or failed data always beats a calm headline). Every status is a circle
+  (`src/lib/glyph.ts`, `.status-dot` in globals.css), shared by the lists and the map. Faster
+  means more urgent: green breathes slowly, yellow faster, red fastest with a ring closing in; grey
+  signal-lost has a ring spreading and fading. Not handed out: small, pale, still. Only the map and
+  alert cards animate. With reduced motion the rings hold still, so red and grey stay distinct.
   The status card fills red only for an unacknowledged out-of-zone alert.
 - Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
   the page exists.

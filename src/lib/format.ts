@@ -15,12 +15,12 @@ export const EPISODE_LABEL: Record<EpisodeType, string> = {
   signal_lost: "Sinyal hilang",
 };
 
-/** Marker and label colours per status, dark enough to read as text on the tinted alert rows. */
+/** Label colours per status, dark enough to read on the tinted alert cards. Dots: globals.css. */
 export const STATUS_COLOR: Record<FixStatus | EpisodeType, string> = {
   normal: "#15803d",
   warn: "#9a4a06",
   alert: "#b91c1c",
-  signal_lost: "#6d28d9",
+  signal_lost: "#5b6472",
   unassigned: "#5b6472",
 };
 

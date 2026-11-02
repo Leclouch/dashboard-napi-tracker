@@ -1,11 +1,24 @@
-import { glyphAttrs } from "@/lib/glyph";
+import type { CSSProperties } from "react";
+import { statusDotClass } from "@/lib/glyph";
 import type { DisplayStatus } from "@/lib/status";
 
-/** Status shape. Decorative: the label next to it carries the meaning for screen readers. */
-export default function StatusGlyph({ status, size = 18 }: { status: DisplayStatus; size?: number }) {
+interface Props {
+  status: DisplayStatus;
+  size?: number;
+  /** Off by default: only the map and alert cards move, so the screen doesn't flicker everywhere. */
+  animated?: boolean;
+}
+
+/** Status dot. Decorative: the label next to it carries the meaning for screen readers. */
+export default function StatusGlyph({ status, size = 18, animated = false }: Props) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" className="shrink-0">
-      <path {...glyphAttrs(status)} />
-    </svg>
+    <span
+      aria-hidden="true"
+      className={statusDotClass(status, animated)}
+      style={{ "--dot": `${size}px` } as CSSProperties}
+    >
+      <span className="status-dot__ring" />
+      <span className="status-dot__core" />
+    </span>
   );
 }

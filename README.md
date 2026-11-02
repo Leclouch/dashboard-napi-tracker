@@ -40,7 +40,7 @@ until staff accounts exist.
 | `src/components/AssignmentsSheet.tsx` | Start and end assignments |
 | `src/components/MapView.tsx` | Leaflet map (client only, loaded with `ssr: false`) |
 | `src/lib/live-context.ts` | Shared state for the pages (`useShell`) |
-| `src/lib/status.ts`, `glyph.ts` | Status rules (tally, headline) and the shape for each status |
+| `src/lib/status.ts`, `glyph.ts` | Status rules (tally, headline) and the animated status dots |
 | `src/lib/use-alarm.ts` | Alarm sound for new alerts |
 | `src/lib/use-live-data.ts` | REST snapshot + Socket.IO updates |
 | `src/lib/api.ts`, `types.ts` | Backend calls and response shapes |

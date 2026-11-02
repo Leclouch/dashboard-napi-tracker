@@ -4,7 +4,7 @@
 @theme inline {
   --font-sans: var(--font-body);
 
-  /* Same saturation and lightness as Gojek's green. Never used on the map: blue isn't a status. */
+  /* Same saturation and lightness as Gojek's green. Blue isn't a status, so it stays off the map. */
   --color-brand: #0046a8;
   --color-brand-dark: #00357f;
 
@@ -16,7 +16,7 @@
 
   --color-alert-tint: #fde8e6;
   --color-warn-tint: #fff4d1;
-  --color-signal-tint: #eee8fc;
+  --color-signal-tint: #e9ecf1;
 }
 
 :root {
@@ -104,9 +104,132 @@ body {
   border: none;
 }
 
-.bracelet-marker svg {
+.bracelet-marker .status-dot {
   display: block;
-  filter: drop-shadow(0 1px 2px rgb(11 31 63 / 0.45));
+}
+
+/* Every status is a circle. The faster it moves, the sooner someone must act. */
+.status-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  height: var(--dot);
+  position: relative;
+  vertical-align: middle;
+  width: var(--dot);
+}
+
+.status-dot__core,
+.status-dot__ring {
+  border-radius: 50%;
+  inset: 0;
+  position: absolute;
+}
+
+.status-dot__core {
+  background: var(--status);
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 1px 4px 2px rgb(11 31 63 / 0.3);
+  inset: 16%;
+}
+
+.status-dot__ring {
+  border: 2.5px solid var(--status);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.status-dot--normal {
+  --status: #15803d;
+}
+
+.status-dot--warn {
+  --status: #fbbf24;
+}
+
+.status-dot--alert {
+  --status: #b91c1c;
+}
+
+.status-dot--signal_lost {
+  --status: #6b7280;
+}
+
+/* Not handed out: nothing to watch, so smaller, paler and still. */
+.status-dot--unassigned {
+  --status: #a7b0be;
+}
+
+.status-dot--unassigned .status-dot__core {
+  inset: 28%;
+}
+
+@keyframes dot-breathe {
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes dot-ring-closing {
+  0% {
+    opacity: 0;
+    transform: scale(2);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.9;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes dot-ring-spreading {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.8);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+.status-dot--normal.is-animated .status-dot__core {
+  animation: dot-breathe 3s ease-in-out infinite;
+}
+
+.status-dot--warn.is-animated .status-dot__core {
+  animation: dot-breathe 1.4s ease-in-out infinite;
+}
+
+.status-dot--alert.is-animated .status-dot__core {
+  animation: dot-breathe 0.6s ease-in-out infinite;
+}
+
+.status-dot--alert.is-animated .status-dot__ring {
+  animation: dot-ring-closing 1s ease-in infinite;
+}
+
+.status-dot--signal_lost.is-animated .status-dot__ring {
+  animation: dot-ring-spreading 2.2s ease-out infinite;
+}
+
+/* Without motion, the rings hold still, so red and grey can still be told apart at a glance. */
+@media (prefers-reduced-motion: reduce) {
+  .status-dot.is-animated .status-dot__core,
+  .status-dot.is-animated .status-dot__ring {
+    animation: none;
+  }
+
+  .status-dot--alert.is-animated .status-dot__ring,
+  .status-dot--signal_lost.is-animated .status-dot__ring {
+    opacity: 0.9;
+    transform: scale(1.3);
+  }
 }
 
 .bracelet-marker.is-selected {

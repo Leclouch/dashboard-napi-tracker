@@ -78,7 +78,7 @@ export default function AlertList({
               className="flex w-full gap-2.5 rounded-lg text-left"
             >
               <span className="pt-0.5">
-                <StatusGlyph status={alert.type} size={24} />
+                <StatusGlyph status={alert.type} size={24} animated />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">

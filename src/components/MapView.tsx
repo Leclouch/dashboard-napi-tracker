@@ -18,7 +18,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import { FIX_STATUS_LABEL, EPISODE_LABEL, formatAgo, formatDistance } from "@/lib/format";
-import { glyphSvg } from "@/lib/glyph";
+import { statusDotHtml } from "@/lib/glyph";
 import type { DisplayStatus, Selection } from "@/lib/status";
 import type { Assignment, Episode, Fix, Zone } from "@/lib/types";
 
@@ -72,10 +72,10 @@ function statusIcon(status: DisplayStatus, emphasised: boolean, selected: boolea
   const key = `${status}:${emphasised}:${selected}`;
   let icon = icons.get(key);
   if (!icon) {
-    const size = emphasised ? 34 : 26;
+    const size = emphasised ? 26 : 20;
     icon = divIcon({
       className: `bracelet-marker${selected ? " is-selected" : ""}`,
-      html: glyphSvg(status, size),
+      html: statusDotHtml(status, size),
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
       tooltipAnchor: [0, -size / 2],
