@@ -100,10 +100,14 @@ export interface Bracelet {
 }
 
 /** An inmate or a guard; both have the same shape in the backend. */
+/** Which list a person belongs to: the backend's /inmates or /guards. */
+export type PersonKind = "inmates" | "guards";
+
 export interface Person {
   id: number;
   name: string;
-  status: string;
+  /** Inactive people (released, left) stay in the history but can't start a new assignment. */
+  status: "active" | "inactive";
   createdAt: string;
 }
 

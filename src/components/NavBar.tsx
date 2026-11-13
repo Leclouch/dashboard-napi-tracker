@@ -29,7 +29,7 @@ const ITEMS: NavItem[] = [
   { label: "Pemantauan", icon: MapIcon, href: "/" },
   { label: "Penugasan", icon: ClipboardIcon, href: "/penugasan" },
   { label: "Riwayat", icon: ClockIcon },
-  { label: "Data master", icon: PeopleIcon },
+  { label: "Data master", icon: PeopleIcon, href: "/data-master" },
   { label: "Pengaturan", icon: SlidersIcon },
   { label: "Akun", icon: ShieldIcon, href: "/akun", superadminOnly: true },
 ];

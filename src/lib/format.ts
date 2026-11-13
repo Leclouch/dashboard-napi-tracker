@@ -44,7 +44,27 @@ export const AUDIT_LABEL: Record<string, string> = {
   backup_code_created: "Kode cadangan dibuat",
   settings_changed: "Pengaturan diubah",
   zone_created: "Zona dibuat",
+  person_created: "Data ditambahkan",
+  person_renamed: "Nama diubah",
+  person_deactivated: "Data dinonaktifkan",
+  person_reactivated: "Data diaktifkan kembali",
 };
+
+/** The kind of person an audit target such as "inmate:3" points at, in words. */
+const PERSON_TARGET_LABEL: Record<string, string> = { inmate: "Warga binaan", guard: "Petugas" };
+
+/**
+ * What an audit entry was about, in words, or null when there is nothing to add. Accounts are
+ * looked up by the caller; people carry their name in the entry itself.
+ */
+export function personAuditText(target: string | null, detail: Record<string, unknown> | null): string | null {
+  const kind = target ? PERSON_TARGET_LABEL[target.split(":")[0]] : undefined;
+  if (!kind) return null;
+  const name = typeof detail?.name === "string" ? detail.name : null;
+  const previous = typeof detail?.previousName === "string" ? detail.previousName : null;
+  if (name && previous) return `${kind}: ${previous} menjadi ${name}`;
+  return name ? `${kind}: ${name}` : kind;
+}
 
 const timeFormat = new Intl.DateTimeFormat("id-ID", {
   timeZone: "Asia/Jakarta",

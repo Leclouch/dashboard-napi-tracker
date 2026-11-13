@@ -45,6 +45,12 @@ so explain what you change and why.
   from GET /fixes/trails, then each live fix appended. Drawn in MapView as lines plus a small dot per reported position (hover shows the
   time), coloured by status and fading with age; GPS jitter under 3 m is thinned out. Only the selected
   bracelet gets one.
+- Data master (`/data-master`, `DataMasterSheet.tsx`): warga binaan and petugas tabs, open to all staff.
+  Add (a name that already exists only asks "Tetap tambahkan", it never refuses: two people can share
+  a name), rename, deactivate, reactivate. People are never deleted: assignments, alerts and the audit
+  log point at them. Deactivating is refused while someone has an open assignment (the backend
+  answers 409; the page hides the button and links to Penugasan). Bracelets stay in /admin
+  (superadmin only; adding one needs the firmware config and a manual EMQX user).
 - Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
   the page exists.
 - Alarm (`src/lib/use-alarm.ts`): Web Audio beep, no sound file. Alert and signal_lost repeat every

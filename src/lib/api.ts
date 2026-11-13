@@ -10,6 +10,7 @@ import type {
   NewAccount,
   NewAssignment,
   Person,
+  PersonKind,
   StaffAccount,
   StaffRole,
   Trail,
@@ -178,6 +179,23 @@ export class Api {
 
   guards(): Promise<Person[]> {
     return this.request("GET", "/guards");
+  }
+
+  addPerson(kind: PersonKind, name: string): Promise<Person> {
+    return this.request("POST", `/${kind}`, { name });
+  }
+
+  renamePerson(kind: PersonKind, id: number, name: string): Promise<Person> {
+    return this.request("PUT", `/${kind}/${id}`, { name });
+  }
+
+  /** 409 while the person still has an open assignment. */
+  deactivatePerson(kind: PersonKind, id: number): Promise<Person> {
+    return this.request("POST", `/${kind}/${id}/deactivate`);
+  }
+
+  reactivatePerson(kind: PersonKind, id: number): Promise<Person> {
+    return this.request("POST", `/${kind}/${id}/reactivate`);
   }
 
   startAssignment(input: NewAssignment): Promise<Assignment> {

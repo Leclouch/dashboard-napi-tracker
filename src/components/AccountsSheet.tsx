@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ApiError } from "@/lib/api";
-import { AUDIT_LABEL, formatDateTime } from "@/lib/format";
+import { AUDIT_LABEL, formatDateTime, personAuditText } from "@/lib/format";
 import { useShell } from "@/lib/live-context";
 import type {
   AccountStatus,
@@ -265,9 +265,10 @@ function AccountRow({
 }
 
 function AuditList({ entries, accounts }: { entries: AuditEntry[]; accounts: StaffAccount[] }) {
-  function targetText(target: string | null): string | null {
+  function targetText(entry: AuditEntry): string | null {
+    const { target } = entry;
     const id = target?.startsWith("account:") ? Number(target.slice("account:".length)) : null;
-    if (id === null) return null;
+    if (id === null) return personAuditText(target, entry.detail);
     return accounts.find((account) => account.id === id)?.displayName ?? target;
   }
 
@@ -275,7 +276,7 @@ function AuditList({ entries, accounts }: { entries: AuditEntry[]; accounts: Sta
   return (
     <ul className="mt-2 divide-y divide-line">
       {entries.map((entry) => {
-        const target = targetText(entry.target);
+        const target = targetText(entry);
         return (
           <li key={entry.id} className="py-2">
             <p className="text-sm font-semibold text-ink">
