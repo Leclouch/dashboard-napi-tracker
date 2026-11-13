@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useShell } from "@/lib/live-context";
 import { logOut, logOutEverywhere } from "@/lib/session";
 
-const ROW_BUTTON = "min-h-11 w-full rounded-full px-4 text-base font-semibold disabled:opacity-60";
+const ROW_BUTTON = "min-h-11 w-full squircle px-4 text-base font-semibold disabled:opacity-60";
 
 /** Shows who is logged in, so a handover can't go unnoticed, and the ways to leave. */
 export default function AccountMenu({ onClose }: { onClose: () => void }) {

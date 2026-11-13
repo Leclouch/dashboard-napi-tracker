@@ -102,7 +102,7 @@ export default function AlertList({
                 <button
                   type="button"
                   onClick={() => onAcknowledge(alert.id)}
-                  className="min-h-10 rounded-full bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark"
+                  className="min-h-10 squircle bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark"
                 >
                   Tandai sudah dilihat
                 </button>
@@ -119,7 +119,7 @@ export default function AlertList({
                   href={directionsUrl(fix)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-brand bg-white px-3 text-sm font-semibold text-brand hover:bg-ground"
+                  className="inline-flex min-h-10 items-center gap-1.5 squircle border border-brand bg-white px-3 text-sm font-semibold text-brand hover:bg-ground"
                 >
                   <DirectionsIcon size={18} />
                   {alert.type === "signal_lost" ? "Ke posisi terakhir" : "Petunjuk arah"}

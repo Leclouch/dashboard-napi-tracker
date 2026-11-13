@@ -13,7 +13,7 @@ export default function TrailRange({ value, onChange }: Props) {
     <div
       role="group"
       aria-label="Panjang jejak"
-      className="float-surface fixed top-[8.75rem] left-2 z-[1100] flex items-center gap-1 rounded-full p-1 lg:top-[4.75rem] lg:left-3"
+      className="float-surface fixed top-[8.75rem] left-2 z-[1100] flex items-center gap-1 squircle [--squircle:18px] p-1 lg:top-[4.75rem] lg:left-3"
     >
       <span className="pr-1 pl-3 text-sm font-semibold text-ink-soft">Jejak</span>
       {TRAIL_OPTIONS.map((minutes) => (
@@ -22,7 +22,7 @@ export default function TrailRange({ value, onChange }: Props) {
           type="button"
           aria-pressed={minutes === value}
           onClick={() => onChange(minutes)}
-          className={`h-8 rounded-full px-3 text-sm font-bold ${
+          className={`h-8 squircle px-3 text-sm font-bold ${
             minutes === value ? "bg-brand text-white" : "text-ink hover:bg-ground"
           }`}
         >

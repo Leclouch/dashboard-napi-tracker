@@ -4,9 +4,14 @@
 @theme inline {
   --font-sans: var(--font-body);
 
-  /* Same saturation and lightness as Gojek's green. Blue isn't a status, so it stays off the map. */
-  --color-brand: #0046a8;
-  --color-brand-dark: #00357f;
+  /*
+   * Blue isn't a status, so it stays off the map. Lighter than Gojek green's lightness on purpose
+   * (it was #0046a8, hsl 215 100% 33%): this is hsl 215 100% 44%, still 5.8:1 with white text and
+   * 4.9:1 as text on --color-selected. Any lighter and blue text on the selected row drops below AA.
+   * The dark one is the hover colour.
+   */
+  --color-brand: #005de0;
+  --color-brand-dark: #004cb8;
 
   --color-ink: #0b1f3f;
   --color-ink-soft: #4a5a75;
@@ -41,6 +46,17 @@ body {
   box-shadow:
     0 1px 2px rgb(11 31 63 / 0.1),
     0 8px 24px rgb(11 31 63 / 0.14);
+}
+
+/*
+ * Buttons, and the bars that hold them: a rounded square instead of a pill. `corner-shape` makes
+ * the corners a squircle (the smooth curve of an app icon) where the browser supports it, and
+ * every other browser simply shows the same radius as an ordinary rounded corner.
+ * A bar around buttons wants the button radius plus its padding: set --squircle on it.
+ */
+.squircle {
+  border-radius: var(--squircle, 14px);
+  corner-shape: squircle;
 }
 
 /* Takes the colour out of the street map, so status markers are the brightest thing on it. */
@@ -80,6 +96,11 @@ body {
 @media (max-width: 1023px) {
   .leaflet-bottom {
     bottom: calc(var(--sheet-half) + 4rem);
+  }
+
+  /* Sheet closed (set by AppShell): the controls sit above the tab bar and the docked handle (2.25rem). */
+  [data-sheet="closed"] .leaflet-bottom {
+    bottom: 6.25rem;
   }
 
   .leaflet-control-zoom {

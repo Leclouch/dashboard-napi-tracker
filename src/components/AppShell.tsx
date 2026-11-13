@@ -55,6 +55,9 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   /** The unseen alerts when the panel was closed; anything newer reopens it. */
   const [collapsedOn, setCollapsedOn] = useState<ReadonlySet<string> | null>(null);
+  /** Same idea for the phone's sheet: the unseen alerts when it was closed, or null while open. */
+  const [phoneClosedOn, setPhoneClosedOn] = useState<ReadonlySet<string> | null>(null);
+  const [sheetPath, setSheetPath] = useState(pathname);
 
   const tally = tallyBracelets(live.openAssignments, live.openAlerts, live.fixes);
   const situation = describeSituation({
@@ -63,9 +66,23 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
     failed: live.error !== null,
     tally,
   });
-  const unseen = live.openAlerts.filter((a) => a.acknowledgedAt === null);
-  const unseenKeys = unseen.map((a) => `${a.id}:${a.type}`);
+  const unseen = useMemo(
+    () => live.openAlerts.filter((a) => a.acknowledgedAt === null),
+    [live.openAlerts],
+  );
+  const unseenKeys = useMemo(() => unseen.map((a) => `${a.id}:${a.type}`), [unseen]);
   const collapsed = collapsedOn !== null && unseenKeys.every((key) => collapsedOn.has(key));
+
+  // Adjusting state while rendering, guarded so it runs once per change. Going to another page
+  // opens its sheet; a new unseen alert reopens the map page's list, as it does on a desktop.
+  // Other pages don't show alerts, so there a new alert only turns the status card red.
+  if (pathname !== sheetPath) {
+    setSheetPath(pathname);
+    setPhoneClosedOn(null);
+  } else if (phoneClosedOn !== null && onMonitor && !unseenKeys.every((key) => phoneClosedOn.has(key))) {
+    setPhoneClosedOn(null);
+  }
+  const phoneClosed = phoneClosedOn !== null;
   const sessionEnd = sessionEndsAt(live.offlineSince, now);
 
   // The count in the browser tab shows up even when another window covers the dashboard.
@@ -89,13 +106,18 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
       },
       me,
       openAccountMenu: () => setAccountMenuOpen(true),
+      phoneSheet: {
+        closed: phoneClosed,
+        setClosed: (closed) => setPhoneClosedOn(closed ? new Set(unseenKeys) : null),
+      },
     }),
-    [live, alarm, now, selection, pathname, router, me],
+    [live, alarm, now, selection, pathname, router, me, phoneClosed, unseenKeys],
   );
 
   return (
     <ShellContext.Provider value={shell}>
-      <div className="fixed inset-0">
+      {/* data-sheet lets globals.css move the map's corner controls down when the sheet is closed. */}
+      <div className="fixed inset-0" data-sheet={phoneClosed ? "closed" : "open"}>
         <MapView
           zones={live.zones}
           fixes={Object.values(live.fixes)}
@@ -104,6 +126,7 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
           now={now}
           selection={selection}
           trail={trail}
+          sheetClosed={phoneClosed}
           onSelect={shell.select}
           onClearSelection={() => setSelection(null)}
         />
@@ -151,7 +174,11 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
       </div>
 
       {onMonitor && (
-        <PhoneSheet>
+        <PhoneSheet
+          closed={phoneClosed}
+          onOpen={() => shell.phoneSheet.setClosed(false)}
+          onClose={() => shell.phoneSheet.setClosed(true)}
+        >
           <ListPanel showBracelets />
         </PhoneSheet>
       )}

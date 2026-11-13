@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { useShell } from "@/lib/live-context";
 import type { Assignment, Bracelet, Person } from "@/lib/types";
+import PageSheet from "./PageSheet";
 
 function Field({
   label,
@@ -76,7 +77,7 @@ function RunningRow({
             type="button"
             onClick={() => setConfirming(false)}
             disabled={busy}
-            className="min-h-10 rounded-full px-4 text-sm font-semibold text-ink hover:bg-ground"
+            className="min-h-10 squircle px-4 text-sm font-semibold text-ink hover:bg-ground"
           >
             Batal
           </button>
@@ -84,7 +85,7 @@ function RunningRow({
             type="button"
             onClick={end}
             disabled={busy}
-            className="min-h-10 rounded-full bg-[#b91c1c] px-4 text-sm font-semibold text-white hover:bg-[#8f1414] disabled:opacity-60"
+            className="min-h-10 squircle bg-[#b91c1c] px-4 text-sm font-semibold text-white hover:bg-[#8f1414] disabled:opacity-60"
           >
             {busy ? "Mengakhiri…" : "Ya, akhiri"}
           </button>
@@ -93,7 +94,7 @@ function RunningRow({
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="mt-2 min-h-10 rounded-full border border-line px-4 text-sm font-semibold text-ink hover:bg-ground"
+          className="mt-2 min-h-10 squircle border border-line px-4 text-sm font-semibold text-ink hover:bg-ground"
         >
           Akhiri penugasan
         </button>
@@ -198,7 +199,7 @@ export default function AssignmentsSheet() {
   }
 
   return (
-    <main className="float-surface fixed inset-x-0 top-36 bottom-16 z-[1050] overflow-y-auto rounded-t-3xl lg:inset-auto lg:top-20 lg:bottom-3 lg:left-3 lg:w-[min(46rem,calc(100vw-23rem-2.25rem))] lg:rounded-2xl">
+    <PageSheet>
       <div className="p-4 lg:p-6">
         <h2 className="text-2xl font-extrabold text-ink">Penugasan</h2>
 
@@ -241,7 +242,7 @@ export default function AssignmentsSheet() {
             <button
               type="submit"
               disabled={!ready || busy}
-              className="min-h-12 w-full rounded-full bg-brand px-4 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+              className="min-h-12 w-full squircle bg-brand px-4 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
             >
               {busy ? "Memulai…" : "Mulai penugasan"}
             </button>
@@ -263,6 +264,6 @@ export default function AssignmentsSheet() {
           </section>
         </div>
       </div>
-    </main>
+    </PageSheet>
   );
 }

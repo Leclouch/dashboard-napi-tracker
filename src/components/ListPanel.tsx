@@ -34,7 +34,7 @@ export default function ListPanel({ showBracelets, collapse }: Props) {
             onClick={collapse.toggle}
             aria-expanded={!collapsed}
             aria-label={collapsed ? "Buka panel" : "Tutup panel"}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-ground"
+            className="flex h-9 w-9 items-center justify-center squircle text-ink hover:bg-ground"
           >
             <ChevronIcon open={!collapsed} />
           </button>

@@ -31,8 +31,13 @@ so explain what you change and why.
   map, live data, alarm and selection, shared through `useShell()` (`src/lib/live-context.ts`). Pages
   only add a sheet over the map, so status and alerts stay visible and the map keeps its view.
 - Look: Gojek-inspired layout and shapes, plain serious wording, no illustrations, not its branding.
-  Brand blue #0046a8 matches Gojek green's saturation and lightness; keep it off the map, because
-  blue isn't a status. Warn dots use amber #fbbf24, text keeps the darker amber.
+  Brand blue is #005de0 (hover #004cb8), made lighter than the original #0046a8 on 2026-11-14; it
+  was chosen as the lightest that keeps AA contrast for blue text on the selected-row tint (4.9:1).
+  Keep it off the map, because blue isn't a status. Warn dots use amber #fbbf24, text keeps the darker amber.
+  Buttons and the bars that hold them use `.squircle` (globals.css: 14 px radius plus `corner-shape:
+  squircle`, which only Chromium 139+ draws as a true squircle; elsewhere it is a plain rounded
+  corner). A bar around buttons sets `--squircle` to the button radius plus its padding. Only dots,
+  the grab bar and count badges stay fully round. Inputs are still `rounded-xl`.
 - Status display: `src/lib/status.ts` holds the pure rules (open episode beats latest fix, tally, the
   card headline; offline or failed data always beats a calm headline). Every status is a circle
   (`src/lib/glyph.ts`, `.status-dot` in globals.css), shared by the lists and the map. Faster
@@ -62,6 +67,19 @@ so explain what you change and why.
   edit (the backend answers 403 otherwise). Saving asks first and lists "from -> to", then sends only
   the changed fields so the audit log shows what moved. Limits mirror the backend's; the backend
   enforces them. Alarm counts apply at once; a bracelet gets a new interval at its next report.
+- Phone sheets (`BottomSheet.tsx`, used by `PhoneSheet.tsx` for the map page's list and `PageSheet.tsx`
+  for every other page; `SheetHandle.tsx` draws the strip): drag the handle and the sheet follows the
+  finger, then settles on the nearest stop (a flick carries it further); a tap steps to the next stop and
+  the arrow closes. Stops: closed, half, full on the map page; closed, full elsewhere. Closed leaves only
+  the map, the status card, the tab bar and the handle docked above the tab bar (2.25rem). While
+  dragging, the height is written straight to the element (no re-render per move); React state changes
+  only when the sheet settles. The sheet rests on CSS heights, so it follows the screen when it turns.
+  Closed content is `inert` on a phone. Keep HALF_RATIO (BottomSheet) in step with `--sheet-half`
+  (globals.css) and `coveredEdges` (MapView).
+  State lives in AppShell (`phoneSheet` in the shell context): going to another page opens its sheet, and
+  a new unseen alert reopens the map page's list (other pages don't show alerts, so there it only turns
+  the status card red). Sheets stay mounted while closed, so a half-filled form survives. Desktop is
+  unchanged. `data-sheet="closed"` on the map wrapper moves Leaflet's corner controls down (globals.css).
 - Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
   the page exists.
 - Alarm (`src/lib/use-alarm.ts`): Web Audio beep, no sound file. Alert and signal_lost repeat every

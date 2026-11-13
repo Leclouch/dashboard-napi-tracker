@@ -66,7 +66,7 @@ export default function StatusCard({ situation, tally, urgent }: Props) {
           </p>
         </div>
         {/* On phones the navbar has no room for these, so they live on the card. */}
-        <div className={`flex lg:hidden ${filledRed || hazard ? "rounded-full bg-white text-ink" : ""}`}>
+        <div className={`flex lg:hidden ${filledRed || hazard ? "squircle bg-white text-ink" : ""}`}>
           <SoundButton />
           <LogoutButton />
         </div>

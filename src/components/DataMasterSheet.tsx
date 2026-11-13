@@ -5,11 +5,12 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ApiError } from "@/lib/api";
 import { useShell } from "@/lib/live-context";
 import type { Assignment, Person, PersonKind } from "@/lib/types";
+import PageSheet from "./PageSheet";
 
 const INPUT =
   "mt-1 block h-12 w-full rounded-xl border border-line bg-white px-3 text-base font-normal text-ink";
 const SMALL_BUTTON =
-  "min-h-10 rounded-full border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
+  "min-h-10 squircle border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
 
 const TABS: { kind: PersonKind; label: string; singular: string }[] = [
   { kind: "inmates", label: "Warga binaan", singular: "warga binaan" },
@@ -141,7 +142,7 @@ function PersonRow({
                 `${person.name} masih punya penugasan terbuka. Akhiri penugasan itu dulu.`,
               )
             }
-            className="min-h-10 rounded-full bg-[#b91c1c] px-4 text-sm font-semibold text-white hover:bg-[#8f1414] disabled:opacity-60"
+            className="min-h-10 squircle bg-[#b91c1c] px-4 text-sm font-semibold text-white hover:bg-[#8f1414] disabled:opacity-60"
           >
             Ya, nonaktifkan
           </button>
@@ -265,7 +266,7 @@ export default function DataMasterSheet() {
   }
 
   return (
-    <main className="float-surface fixed inset-x-0 top-36 bottom-16 z-[1050] overflow-y-auto rounded-t-3xl lg:inset-auto lg:top-20 lg:bottom-3 lg:left-3 lg:w-[min(46rem,calc(100vw-23rem-2.25rem))] lg:rounded-2xl">
+    <PageSheet>
       <div className="p-4 lg:p-6">
         <h2 className="text-2xl font-extrabold text-ink">Data master</h2>
 
@@ -286,7 +287,7 @@ export default function DataMasterSheet() {
                 setDuplicate(null);
                 setSearch("");
               }}
-              className={`min-h-10 rounded-full px-4 text-sm font-semibold ${
+              className={`min-h-10 squircle px-4 text-sm font-semibold ${
                 kind === t.kind ? "bg-brand text-white" : "text-ink hover:bg-ground"
               }`}
             >
@@ -336,7 +337,7 @@ export default function DataMasterSheet() {
                   type="button"
                   disabled={busy}
                   onClick={() => void add(true)}
-                  className="min-h-10 rounded-full bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+                  className="min-h-10 squircle bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
                 >
                   Tetap tambahkan
                 </button>
@@ -346,7 +347,7 @@ export default function DataMasterSheet() {
             <button
               type="submit"
               disabled={busy || !normalise(newName)}
-              className="min-h-12 w-full rounded-full bg-brand px-4 font-bold text-white hover:bg-brand-dark disabled:opacity-50 md:w-auto"
+              className="min-h-12 w-full squircle bg-brand px-4 font-bold text-white hover:bg-brand-dark disabled:opacity-50 md:w-auto"
             >
               {busy ? "Menyimpan…" : "Tambah"}
             </button>
@@ -401,6 +402,6 @@ export default function DataMasterSheet() {
           )}
         </section>
       </div>
-    </main>
+    </PageSheet>
   );
 }

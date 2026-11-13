@@ -15,6 +15,11 @@ export interface Shell {
   select: (braceletId: number) => void;
   me: Me;
   openAccountMenu: () => void;
+  /**
+   * The panel over the map on a phone (the list on the map page, or the sheet of any other page).
+   * Closed means only the map, the status card and the tab bar show.
+   */
+  phoneSheet: { closed: boolean; setClosed: (closed: boolean) => void };
 }
 
 /** Everything the pages share. AppShell owns it, so it survives moving between pages. */

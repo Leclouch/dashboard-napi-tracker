@@ -86,7 +86,7 @@ export default function SetPasswordPage({ mode }: { mode: "invite" | "reset" }) 
         {done ? (
           <>
             <p className="text-base text-ink">Kata sandi tersimpan. Silakan masuk.</p>
-            <Link href="/" className="block rounded-full bg-brand px-3 py-3 text-center font-bold text-white">
+            <Link href="/" className="block squircle bg-brand px-3 py-3 text-center font-bold text-white">
               Ke halaman masuk
             </Link>
           </>
@@ -137,7 +137,7 @@ export default function SetPasswordPage({ mode }: { mode: "invite" | "reset" }) 
             <button
               type="submit"
               disabled={busy || tooShort || repeat !== password}
-              className="min-h-12 w-full rounded-full bg-brand px-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+              className="min-h-12 w-full squircle bg-brand px-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
             >
               {busy ? "Menyimpan…" : "Simpan kata sandi"}
             </button>

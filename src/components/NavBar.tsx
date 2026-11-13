@@ -51,7 +51,7 @@ export function SoundButton() {
       aria-pressed={!alarm.muted}
       aria-label={label}
       title={label}
-      className={`flex h-10 items-center gap-1.5 rounded-full px-2.5 text-sm font-semibold ${
+      className={`flex h-10 items-center gap-1.5 squircle px-2.5 text-sm font-semibold ${
         blocked ? "bg-warn-tint text-[#7a3a04]" : "text-ink hover:bg-ground"
       }`}
     >
@@ -71,7 +71,7 @@ export function LogoutButton() {
       onClick={openAccountMenu}
       aria-label={label}
       title={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-ground"
+      className="flex h-10 w-10 items-center justify-center squircle text-ink hover:bg-ground"
     >
       <LogoutIcon />
     </button>
@@ -88,7 +88,7 @@ export default function NavBar() {
     <>
       <nav
         aria-label="Menu utama"
-        className="float-surface fixed top-3 left-3 z-[1100] hidden h-14 items-center gap-1 rounded-full px-2 lg:flex"
+        className="float-surface fixed top-3 left-3 z-[1100] hidden h-14 items-center gap-1 squircle [--squircle:22px] px-2 lg:flex"
       >
         <span className="mr-1 hidden pl-3 text-base font-extrabold whitespace-nowrap text-brand xl:block">
           Gelang GPS
@@ -113,7 +113,7 @@ export default function NavBar() {
               key={label}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold whitespace-nowrap ${
+              className={`flex h-10 items-center gap-1.5 squircle px-3 text-sm font-semibold whitespace-nowrap ${
                 active ? "bg-brand text-white" : "text-ink hover:bg-ground"
               }`}
             >

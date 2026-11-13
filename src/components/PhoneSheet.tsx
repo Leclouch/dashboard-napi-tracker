@@ -1,53 +1,40 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import BottomSheet, { type SheetStop } from "./BottomSheet";
 
-/** How far a finger must travel before it counts as a swipe rather than a tap. */
-const SWIPE_PX = 24;
+const STOPS: readonly SheetStop[] = ["closed", "half", "full"];
 
-/** Bottom sheet with two stops, half and full. Tap the handle or swipe it. */
-export default function PhoneSheet({ children }: { children: ReactNode }) {
+interface Props {
+  children: ReactNode;
+  /** Closed all the way: only the handle stays, docked above the tab bar. */
+  closed: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}
+
+/**
+ * The map page's list on a phone, with three stops: closed, half and full. Drag the handle and
+ * it settles on the nearest one; tap it to step up. It comes back from closed at half height,
+ * the stop that keeps the map in view. Hidden on a desktop, where the list is a side panel.
+ */
+export default function PhoneSheet({ children, closed, onOpen, onClose }: Props) {
   const [full, setFull] = useState(false);
-  const startY = useRef<number | null>(null);
+  const stop: SheetStop = closed ? "closed" : full ? "full" : "half";
 
-  function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
-    startY.current = event.clientY;
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-
-  function onPointerUp(event: PointerEvent<HTMLButtonElement>) {
-    if (startY.current === null) return;
-    const moved = event.clientY - startY.current;
-    startY.current = null;
-    if (moved < -SWIPE_PX) setFull(true);
-    else if (moved > SWIPE_PX) setFull(false);
-    else setFull((current) => !current);
-  }
-
-  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    setFull((current) => !current);
+  function onStopChange(next: SheetStop) {
+    if (next === "closed") {
+      setFull(false);
+      onClose();
+      return;
+    }
+    setFull(next === "full");
+    if (closed) onOpen();
   }
 
   return (
-    <section
-      className={`fixed inset-x-0 bottom-16 z-[1050] flex flex-col rounded-t-3xl bg-white shadow-[0_-8px_24px_rgb(11_31_63/0.16)] transition-[height] duration-200 motion-reduce:transition-none lg:hidden ${
-        full ? "h-[calc(100dvh-4rem-7.5rem)]" : "h-[var(--sheet-half)]"
-      }`}
-    >
-      <button
-        type="button"
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onKeyDown={onKeyDown}
-        aria-expanded={full}
-        aria-label={full ? "Kecilkan daftar" : "Besarkan daftar"}
-        className="flex h-6 shrink-0 touch-none items-center justify-center"
-      >
-        <span className="h-1.5 w-12 rounded-full bg-line" />
-      </button>
+    <BottomSheet stops={STOPS} stop={stop} onStopChange={onStopChange} topRem={7.5} className="lg:hidden">
       {children}
-    </section>
+    </BottomSheet>
   );
 }

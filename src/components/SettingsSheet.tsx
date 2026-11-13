@@ -18,9 +18,10 @@ import {
   type FormValues,
 } from "@/lib/settings";
 import type { Settings } from "@/lib/types";
+import PageSheet from "./PageSheet";
 
 const SMALL_BUTTON =
-  "min-h-10 rounded-full border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
+  "min-h-10 squircle border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
 
 function Field({
   spec,
@@ -148,7 +149,7 @@ export default function SettingsSheet() {
     );
 
   return (
-    <main className="float-surface fixed inset-x-0 top-36 bottom-16 z-[1050] overflow-y-auto rounded-t-3xl lg:inset-auto lg:top-20 lg:bottom-3 lg:left-3 lg:w-[min(46rem,calc(100vw-23rem-2.25rem))] lg:rounded-2xl">
+    <PageSheet>
       <div className="p-4 lg:p-6">
         <h2 className="text-2xl font-extrabold text-ink">Pengaturan</h2>
         {saved && (
@@ -221,7 +222,7 @@ export default function SettingsSheet() {
                         type="button"
                         disabled={busy}
                         onClick={() => void save()}
-                        className="min-h-10 rounded-full bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+                        className="min-h-10 squircle bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
                       >
                         {busy ? "Menyimpan…" : "Ya, simpan"}
                       </button>
@@ -233,7 +234,7 @@ export default function SettingsSheet() {
                       type="button"
                       disabled={!canSave}
                       onClick={() => setConfirming(true)}
-                      className="min-h-12 rounded-full bg-brand px-6 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+                      className="min-h-12 squircle bg-brand px-6 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
                     >
                       Simpan perubahan
                     </button>
@@ -256,6 +257,6 @@ export default function SettingsSheet() {
           </>
         )}
       </div>
-    </main>
+    </PageSheet>
   );
 }

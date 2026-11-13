@@ -12,11 +12,12 @@ import type {
   StaffAccount,
   StaffRole,
 } from "@/lib/types";
+import PageSheet from "./PageSheet";
 
 const INPUT =
   "mt-1 block h-12 w-full rounded-xl border border-line bg-white px-3 text-base font-normal text-ink";
 const SMALL_BUTTON =
-  "min-h-10 rounded-full border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
+  "min-h-10 squircle border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
 
 const STATUS_LABEL: Record<AccountStatus, string> = {
   invited: "Menunggu undangan diterima",
@@ -183,7 +184,7 @@ function AccountRow({
                 return `Akun ${name} dinonaktifkan.`;
               }, "Harus tersisa satu superadmin yang aktif.")
             }
-            className="min-h-10 rounded-full bg-[#b91c1c] px-4 text-sm font-semibold text-white hover:bg-[#8f1414] disabled:opacity-60"
+            className="min-h-10 squircle bg-[#b91c1c] px-4 text-sm font-semibold text-white hover:bg-[#8f1414] disabled:opacity-60"
           >
             Ya, nonaktifkan
           </button>
@@ -378,7 +379,7 @@ export default function AccountsSheet() {
   ).length;
 
   return (
-    <main className="float-surface fixed inset-x-0 top-36 bottom-16 z-[1050] overflow-y-auto rounded-t-3xl lg:inset-auto lg:top-20 lg:bottom-3 lg:left-3 lg:w-[min(46rem,calc(100vw-23rem-2.25rem))] lg:rounded-2xl">
+    <PageSheet>
       <div className="p-4 lg:p-6">
         <h2 className="text-2xl font-extrabold text-ink">Akun</h2>
 
@@ -417,7 +418,7 @@ export default function AccountsSheet() {
                   role="tab"
                   aria-selected={tab === value}
                   onClick={() => setTab(value)}
-                  className={`min-h-10 rounded-full px-4 text-sm font-semibold ${
+                  className={`min-h-10 squircle px-4 text-sm font-semibold ${
                     tab === value ? "bg-brand text-white" : "text-ink hover:bg-ground"
                   }`}
                 >
@@ -455,7 +456,7 @@ export default function AccountsSheet() {
                   <button
                     type="submit"
                     disabled={busy || !email.trim() || !displayName.trim()}
-                    className="min-h-12 w-full rounded-full bg-brand px-4 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
+                    className="min-h-12 w-full squircle bg-brand px-4 font-bold text-white hover:bg-brand-dark disabled:opacity-50"
                   >
                     {busy ? "Mengirim…" : "Kirim undangan"}
                   </button>
@@ -485,6 +486,6 @@ export default function AccountsSheet() {
           </>
         )}
       </div>
-    </main>
+    </PageSheet>
   );
 }

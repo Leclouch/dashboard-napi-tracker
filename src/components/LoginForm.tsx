@@ -8,7 +8,7 @@ const RESEND_SECONDS = 60;
 
 const INPUT = "mt-1 block h-12 w-full rounded-xl border border-ink-soft px-3 text-ink";
 const SUBMIT =
-  "min-h-12 w-full rounded-full bg-brand px-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50";
+  "min-h-12 w-full squircle bg-brand px-3 font-bold text-white hover:bg-brand-dark disabled:opacity-50";
 const TEXT_BUTTON = "text-sm font-semibold text-brand hover:underline disabled:text-ink-soft";
 
 type Step =

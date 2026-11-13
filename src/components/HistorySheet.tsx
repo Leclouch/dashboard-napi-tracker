@@ -11,6 +11,7 @@ import {
 import { responseMs, summariseAlerts } from "@/lib/history";
 import { useShell } from "@/lib/live-context";
 import type { Assignment, Episode, EpisodeType } from "@/lib/types";
+import PageSheet from "./PageSheet";
 import StatusGlyph from "./StatusGlyph";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -20,7 +21,7 @@ const PAGE_LIMIT = 200;
 const INPUT =
   "mt-1 block h-12 w-full rounded-xl border border-line bg-white px-3 text-base font-normal text-ink";
 const SMALL_BUTTON =
-  "min-h-10 rounded-full border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
+  "min-h-10 squircle border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
 
 const PRESETS = [
   { label: "Hari ini", days: 1 },
@@ -184,7 +185,7 @@ export default function HistorySheet() {
   const summary = summariseAlerts(shownAlerts);
 
   return (
-    <main className="float-surface fixed inset-x-0 top-36 bottom-16 z-[1050] overflow-y-auto rounded-t-3xl lg:inset-auto lg:top-20 lg:bottom-3 lg:left-3 lg:w-[min(46rem,calc(100vw-23rem-2.25rem))] lg:rounded-2xl">
+    <PageSheet>
       <div className="p-4 lg:p-6">
         <h2 className="text-2xl font-extrabold text-ink">Riwayat</h2>
 
@@ -201,7 +202,7 @@ export default function HistorySheet() {
               role="tab"
               aria-selected={tab === value}
               onClick={() => setTab(value)}
-              className={`min-h-10 rounded-full px-4 text-sm font-semibold ${
+              className={`min-h-10 squircle px-4 text-sm font-semibold ${
                 tab === value ? "bg-brand text-white" : "text-ink hover:bg-ground"
               }`}
             >
@@ -223,7 +224,7 @@ export default function HistorySheet() {
                   setFrom(start);
                   setTo(today);
                 }}
-                className={`min-h-10 rounded-full border px-3 text-sm font-semibold ${
+                className={`min-h-10 squircle border px-3 text-sm font-semibold ${
                   active ? "border-brand bg-brand text-white" : "border-line text-ink hover:bg-ground"
                 }`}
               >
@@ -344,6 +345,6 @@ export default function HistorySheet() {
           </>
         )}
       </div>
-    </main>
+    </PageSheet>
   );
 }

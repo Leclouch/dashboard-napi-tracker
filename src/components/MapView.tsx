@@ -63,11 +63,12 @@ function writeLayer(name: string): void {
  * The parts of the map hidden behind floating panels, in pixels. Keep in step with AppShell's
  * panel width and PhoneSheet's half height, so bracelets land in the part staff can see.
  */
-function coveredEdges(map: { getSize(): { y: number } }) {
+function coveredEdges(map: { getSize(): { y: number } }, sheetClosed: boolean) {
   if (window.matchMedia("(min-width: 1024px)").matches) {
     return { top: 0, right: 392, bottom: 0, left: 0 };
   }
-  const sheetHalf = map.getSize().y * 0.42;
+  // With the sheet closed only its docked handle (36 px) and the tab bar cover the bottom.
+  const sheetHalf = sheetClosed ? 36 : map.getSize().y * 0.42;
   return { top: 136, right: 0, bottom: sheetHalf + 64, left: 0 };
 }
 
@@ -97,37 +98,48 @@ function statusIcon(status: DisplayStatus, emphasised: boolean, selected: boolea
 }
 
 /** Zooms to the zones the first time they arrive; after that the user controls the view. */
-function FitToZones({ zones }: { zones: Zone[] }) {
+function FitToZones({ zones, sheetClosed }: { zones: Zone[]; sheetClosed: boolean }) {
   const map = useMap();
   const done = useRef(false);
   useEffect(() => {
     if (done.current || zones.length === 0) return;
     const bounds = latLngBounds(zones.flatMap((z) => ringToLatLngs(z.boundary.coordinates[0])));
-    const covered = coveredEdges(map);
+    const covered = coveredEdges(map, sheetClosed);
     map.fitBounds(bounds, {
       paddingTopLeft: [covered.left + 40, covered.top + 40],
       paddingBottomRight: [covered.right + 40, covered.bottom + 40],
       maxZoom: 18,
     });
     done.current = true;
-  }, [map, zones]);
+  }, [map, zones, sheetClosed]);
   return null;
 }
 
 /** Moves the map to a bracelet when it is selected, but doesn't chase it on every new fix. */
-function FlyToSelection({ selection, fixes }: { selection: Selection | null; fixes: Fix[] }) {
+function FlyToSelection({
+  selection,
+  fixes,
+  sheetClosed,
+}: {
+  selection: Selection | null;
+  fixes: Fix[];
+  sheetClosed: boolean;
+}) {
   const map = useMap();
   const fixesRef = useRef(fixes);
+  // Read when a bracelet is selected; opening or closing the sheet alone must not move the map.
+  const sheetClosedRef = useRef(sheetClosed);
   useEffect(() => {
     fixesRef.current = fixes;
-  }, [fixes]);
+    sheetClosedRef.current = sheetClosed;
+  }, [fixes, sheetClosed]);
 
   useEffect(() => {
     if (!selection) return;
     const fix = fixesRef.current.find((f) => f.braceletId === selection.braceletId);
     if (!fix) return;
     const zoom = Math.max(map.getZoom(), SELECTED_MIN_ZOOM);
-    const covered = coveredEdges(map);
+    const covered = coveredEdges(map, sheetClosedRef.current);
     // Aim past the bracelet by half the covered width, so it lands in the middle of what's visible.
     const target = map.unproject(
       map
@@ -189,6 +201,8 @@ interface Props {
   selection: Selection | null;
   /** Path of the selected bracelet, oldest point first; empty when nothing is selected. */
   trail: TrailPoint[];
+  /** The phone's sheet is closed all the way, so more of the map is visible. */
+  sheetClosed: boolean;
   onSelect: (braceletId: number) => void;
   onClearSelection: () => void;
 }
@@ -201,6 +215,7 @@ export default function MapView({
   now,
   selection,
   trail,
+  sheetClosed,
   onSelect,
   onClearSelection,
 }: Props) {
@@ -244,8 +259,8 @@ export default function MapView({
         </LayersControl.BaseLayer>
       </LayersControl>
 
-      <FitToZones zones={zones} />
-      <FlyToSelection selection={selection} fixes={fixes} />
+      <FitToZones zones={zones} sheetClosed={sheetClosed} />
+      <FlyToSelection selection={selection} fixes={fixes} sheetClosed={sheetClosed} />
       <MapEvents onClear={onClearSelection} />
 
       {zones.map((zone) => (
