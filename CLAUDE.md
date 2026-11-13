@@ -51,6 +51,12 @@ so explain what you change and why.
   log point at them. Deactivating is refused while someone has an open assignment (the backend
   answers 409; the page hides the button and links to Penugasan). Bracelets stay in /admin
   (superadmin only; adding one needs the firmware config and a manual EMQX user).
+- Riwayat (`/riwayat`, `HistorySheet.tsx`, pure summary in `src/lib/history.ts`): past alerts and past
+  assignments for a period, read-only, open to all staff. Dates are WIB days (`wibDay` in format.ts),
+  both ends included, default the last 7 days; the backend returns at most 200 rows and the page says
+  so when it hits that. Each alert shows who held the bracelet when it opened (the backend joins
+  assignments by time), how long it lasted and how fast staff acknowledged it. Not built: replaying a
+  person's movement for a past period (needs a per-bracelet date-range fixes endpoint) and export.
 - Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
   the page exists.
 - Alarm (`src/lib/use-alarm.ts`): Web Audio beep, no sound file. Alert and signal_lost repeat every

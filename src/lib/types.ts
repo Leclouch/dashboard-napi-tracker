@@ -50,6 +50,9 @@ export interface Episode {
   acknowledgedBy: number | null;
   /** Null when nobody has, or it happened before staff accounts existed. */
   acknowledgedByName: string | null;
+  /** Who held the bracelet when this opened. Only on lists (GET /alerts), not on pushed events. */
+  inmateName?: string | null;
+  guardName?: string | null;
 }
 
 export interface EpisodeTransition {

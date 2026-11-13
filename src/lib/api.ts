@@ -165,6 +165,16 @@ export class Api {
     return this.request("GET", "/assignments?open=true");
   }
 
+  /** Alerts that opened between two WIB days (YYYY-MM-DD, both included); newest 200. */
+  alertHistory(from: string, to: string): Promise<Episode[]> {
+    return this.request("GET", `/alerts?from=${from}&to=${to}`);
+  }
+
+  /** Assignments that were running at some point between two WIB days; newest 200. */
+  assignmentHistory(from: string, to: string): Promise<Assignment[]> {
+    return this.request("GET", `/assignments?from=${from}&to=${to}`);
+  }
+
   acknowledge(alertId: number): Promise<Episode> {
     return this.request("POST", `/alerts/${alertId}/acknowledge`);
   }

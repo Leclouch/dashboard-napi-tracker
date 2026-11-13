@@ -103,6 +103,30 @@ export function formatAgo(iso: string, now: number): string {
   return `${Math.floor(hours / 24)} hari lalu`;
 }
 
+/** "45 detik", "12 menit", "2 jam 5 menit": how long something lasted. */
+export function formatDuration(ms: number): string {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds} detik`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} menit`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} jam` : `${hours} jam ${rest} menit`;
+}
+
+// en-CA happens to write dates as YYYY-MM-DD, which is what <input type="date"> and the API use.
+const dayFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Jakarta",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** The WIB calendar day of a moment, as "2026-11-14". */
+export function wibDay(ms: number): string {
+  return dayFormat.format(new Date(ms));
+}
+
 /** "33 m di luar zona", or null inside the zone. */
 export function formatDistance(meters: number | null): string | null {
   if (meters === null || meters <= 0) return null;
