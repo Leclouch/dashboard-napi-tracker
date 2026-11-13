@@ -9,11 +9,13 @@ import { formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/types";
 import { useAlarm } from "@/lib/use-alarm";
 import { useLiveData } from "@/lib/use-live-data";
+import { DEFAULT_TRAIL_MINUTES, useTrail, type TrailMinutes } from "@/lib/use-trail";
 import AccountMenu from "./AccountMenu";
 import ListPanel from "./ListPanel";
 import NavBar from "./NavBar";
 import PhoneSheet from "./PhoneSheet";
 import StatusCard from "./StatusCard";
+import TrailRange from "./TrailRange";
 
 // Leaflet needs `window`, so the map is never prerendered on the server.
 const MapView = dynamic(() => import("./MapView"), {
@@ -43,6 +45,13 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
   const router = useRouter();
   const onMonitor = pathname === "/";
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [trailMinutes, setTrailMinutes] = useState<TrailMinutes>(DEFAULT_TRAIL_MINUTES);
+  const trail = useTrail(
+    live.api,
+    selection?.braceletId ?? null,
+    selection ? live.fixes[selection.braceletId] : undefined,
+    trailMinutes,
+  );
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   /** The unseen alerts when the panel was closed; anything newer reopens it. */
   const [collapsedOn, setCollapsedOn] = useState<ReadonlySet<string> | null>(null);
@@ -94,12 +103,14 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
           assignments={live.openAssignments}
           now={now}
           selection={selection}
+          trail={trail}
           onSelect={shell.select}
           onClearSelection={() => setSelection(null)}
         />
       </div>
 
       <NavBar />
+      {onMonitor && selection && <TrailRange value={trailMinutes} onChange={setTrailMinutes} />}
 
       <div className="pointer-events-none fixed inset-x-2 top-2 z-[1100] flex flex-col gap-3 lg:inset-x-auto lg:top-3 lg:right-3 lg:bottom-3 lg:w-[23rem]">
         <StatusCard

@@ -12,6 +12,7 @@ import type {
   Person,
   StaffAccount,
   StaffRole,
+  Trail,
   Zone,
 } from "./types";
 
@@ -148,6 +149,11 @@ export class Api {
 
   latestFixes(): Promise<Fix[]> {
     return this.request("GET", "/fixes/latest");
+  }
+
+  /** Every bracelet's path over the last N minutes (1..1440), oldest point first. */
+  trails(minutes: number): Promise<Trail[]> {
+    return this.request("GET", `/fixes/trails?minutes=${minutes}`);
   }
 
   openAlerts(): Promise<Episode[]> {

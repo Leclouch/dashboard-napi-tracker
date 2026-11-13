@@ -40,6 +40,11 @@ so explain what you change and why.
   signal-lost has a ring spreading and fading. Not handed out: small, pale, still. Only the map
   animates; lists and alert cards show still circles. With reduced motion the rings hold still, so red and grey stay distinct.
   The status card fills red only for an unacknowledged out-of-zone alert.
+- Trail of the selected bracelet (`use-trail.ts`, `trail.ts`): last 1, 2 or 4 h (default 1 h, chosen in
+  `TrailRange` on the map; 4 h is the most the backend's 5000 points per bracelet hold at a 3 s interval)
+  from GET /fixes/trails, then each live fix appended. Drawn in MapView as lines plus a small dot per reported position (hover shows the
+  time), coloured by status and fading with age; GPS jitter under 3 m is thinned out. Only the selected
+  bracelet gets one.
 - Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
   the page exists.
 - Alarm (`src/lib/use-alarm.ts`): Web Audio beep, no sound file. Alert and signal_lost repeat every

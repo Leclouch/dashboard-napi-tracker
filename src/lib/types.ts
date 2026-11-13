@@ -22,6 +22,21 @@ export interface Fix {
   receivedAt: string;
 }
 
+/** One position on a bracelet's path (backend: TrailPoint in fixes-query.repository.ts). */
+export interface TrailPoint {
+  lat: number;
+  lng: number;
+  status: FixStatus;
+  recordedAt: string;
+}
+
+/** A bracelet's recent path, oldest point first. */
+export interface Trail {
+  braceletId: number;
+  deviceLabel: string;
+  points: TrailPoint[];
+}
+
 export interface Episode {
   id: number;
   braceletId: number;

@@ -2,30 +2,41 @@
 
 // Leaflet touches `window`, so this file is only loaded in the browser (see AppShell: ssr false).
 import "leaflet/dist/leaflet.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { divIcon, latLngBounds, type DivIcon, type LatLngTuple } from "leaflet";
 import {
   AttributionControl,
+  CircleMarker,
   LayerGroup,
   LayersControl,
   MapContainer,
   Marker,
   Polygon,
+  Polyline,
   TileLayer,
   Tooltip,
   ZoomControl,
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { FIX_STATUS_LABEL, EPISODE_LABEL, formatAgo, formatDistance } from "@/lib/format";
+import { FIX_STATUS_LABEL, EPISODE_LABEL, formatAgo, formatDistance, formatTime } from "@/lib/format";
 import { statusDotHtml } from "@/lib/glyph";
 import type { DisplayStatus, Selection } from "@/lib/status";
-import type { Assignment, Episode, Fix, Zone } from "@/lib/types";
+import { runOpacity, spaceDots, trailDots, trailRuns, type TrailDot } from "@/lib/trail";
+import type { Assignment, Episode, Fix, FixStatus, TrailPoint, Zone } from "@/lib/types";
 
 /** Placeholder until zones load: around Lapas Cebongan. */
 const DEFAULT_CENTER: LatLngTuple = [-7.74, 110.3423];
 /** Close enough to tell which side of the fence a bracelet is on. */
 const SELECTED_MIN_ZOOM = 18;
+
+/** Same colours as the status dots (globals.css); Leaflet paths need plain values. */
+const TRAIL_COLOR: Record<FixStatus, string> = {
+  normal: "#15803d",
+  warn: "#fbbf24",
+  alert: "#b91c1c",
+  unassigned: "#6b7280",
+};
 
 const STREET = "Peta jalan";
 const SATELLITE = "Satelit";
@@ -130,6 +141,37 @@ function FlyToSelection({ selection, fixes }: { selection: Selection | null; fix
   return null;
 }
 
+/**
+ * Where the bracelet actually reported from; hover shows when. How many dots show depends on the
+ * zoom (see spaceDots). Clicks on a dot don't reach the map, so they don't clear the selection.
+ */
+function TrailDots({ dots }: { dots: TrailDot[] }) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(() => map.getZoom());
+  useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
+  const shown = useMemo(() => spaceDots(dots, zoom), [dots, zoom]);
+
+  return shown.map((dot) => (
+    <CircleMarker
+      key={dot.recordedAt}
+      center={[dot.lat, dot.lng]}
+      radius={4.5}
+      pathOptions={{
+        color: "#ffffff",
+        weight: 1.5,
+        fillColor: TRAIL_COLOR[dot.status],
+        fillOpacity: runOpacity(dot.age),
+        opacity: runOpacity(dot.age),
+        bubblingMouseEvents: false,
+      }}
+    >
+      <Tooltip className="bracelet-tooltip" direction="top">
+        {formatTime(dot.recordedAt)}
+      </Tooltip>
+    </CircleMarker>
+  ));
+}
+
 function MapEvents({ onClear }: { onClear: () => void }) {
   useMapEvents({
     click: onClear,
@@ -145,6 +187,8 @@ interface Props {
   assignments: Assignment[];
   now: number;
   selection: Selection | null;
+  /** Path of the selected bracelet, oldest point first; empty when nothing is selected. */
+  trail: TrailPoint[];
   onSelect: (braceletId: number) => void;
   onClearSelection: () => void;
 }
@@ -156,10 +200,13 @@ export default function MapView({
   assignments,
   now,
   selection,
+  trail,
   onSelect,
   onClearSelection,
 }: Props) {
   const [initialLayer] = useState(readLayer);
+  const runs = useMemo(() => trailRuns(trail), [trail]);
+  const dots = useMemo(() => trailDots(trail), [trail]);
   const alertByBracelet = new Map(openAlerts.map((a) => [a.braceletId, a]));
   const assignedBracelets = new Set(assignments.map((a) => a.braceletId));
 
@@ -213,6 +260,23 @@ export default function MapView({
           </Tooltip>
         </Polygon>
       ))}
+
+      {/* Not interactive, so a click on the line still reaches the map and clears the selection. */}
+      {runs.map((run, i) => (
+        <Polyline
+          key={i}
+          positions={run.positions}
+          pathOptions={{
+            color: TRAIL_COLOR[run.status],
+            weight: 4,
+            opacity: runOpacity(run.age),
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false,
+          }}
+        />
+      ))}
+      <TrailDots dots={dots} />
 
       {fixes.map((fix) => {
         const alert = alertByBracelet.get(fix.braceletId);
