@@ -1,4 +1,19 @@
-import type { Assignment, Bracelet, Episode, Fix, NewAssignment, Person, Zone } from "./types";
+import type {
+  Assignment,
+  AuditEntry,
+  Bracelet,
+  Episode,
+  Fix,
+  LinkDelivery,
+  LoginStep,
+  Me,
+  NewAccount,
+  NewAssignment,
+  Person,
+  StaffAccount,
+  StaffRole,
+  Zone,
+} from "./types";
 
 /**
  * Backend base URL. NEXT_PUBLIC_ variables are baked in at build time (see .env.example).
@@ -10,40 +25,121 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Set on 429: how long a login is locked. */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
   }
 }
 
-/** Thin wrapper around fetch that sends the admin key on every request. */
+/**
+ * Thin wrapper around fetch. credentials: "include" sends the login cookie; the cookie is
+ * httpOnly, so nothing in this app can read it, and the browser does all the work.
+ */
 export class Api {
-  constructor(private readonly apiKey: string) {}
-
-  private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+  private async request<T>(method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<T> {
     let response: Response;
     try {
       response = await fetch(`${API_URL}${path}`, {
         method,
-        headers: {
-          "x-api-key": this.apiKey,
-          ...(body === undefined ? {} : { "content-type": "application/json" }),
-        },
+        headers: body === undefined ? {} : { "content-type": "application/json" },
         body: body === undefined ? undefined : JSON.stringify(body),
         cache: "no-store",
+        credentials: "include",
       });
     } catch {
       // fetch only throws when the server can't be reached at all (or CORS blocks it).
       throw new ApiError(0, "Server tidak dapat dihubungi");
     }
     if (!response.ok) {
-      throw new ApiError(response.status, `Permintaan gagal (HTTP ${response.status})`);
+      const details = (await response.json().catch(() => null)) as { retryAfterSeconds?: number } | null;
+      throw new ApiError(
+        response.status,
+        `Permintaan gagal (HTTP ${response.status})`,
+        details?.retryAfterSeconds,
+      );
     }
+    if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
   }
 
-  /** Used by the login screen: any authenticated endpoint tells us whether the key is right. */
-  checkKey(): Promise<unknown> {
-    return this.request("GET", "/settings");
+  me(): Promise<Me> {
+    return this.request("GET", "/auth/me");
+  }
+
+  login(email: string, password: string): Promise<LoginStep> {
+    return this.request("POST", "/auth/login", { email, password });
+  }
+
+  verifyCode(challenge: string, code: string, rememberDevice: boolean): Promise<LoginStep> {
+    return this.request("POST", "/auth/verify-code", { challenge, code, rememberDevice });
+  }
+
+  resendCode(challenge: string): Promise<void> {
+    return this.request("POST", "/auth/resend-code", { challenge });
+  }
+
+  logout(): Promise<void> {
+    return this.request("POST", "/auth/logout");
+  }
+
+  logoutEverywhere(): Promise<void> {
+    return this.request("POST", "/auth/logout-everywhere");
+  }
+
+  forgotPassword(email: string): Promise<void> {
+    return this.request("POST", "/auth/forgot-password", { email });
+  }
+
+  resetPassword(token: string, password: string): Promise<void> {
+    return this.request("POST", "/auth/reset-password", { token, password });
+  }
+
+  inviteInfo(token: string): Promise<{ email: string; displayName: string }> {
+    return this.request("POST", "/auth/invite/info", { token });
+  }
+
+  acceptInvite(token: string, password: string): Promise<void> {
+    return this.request("POST", "/auth/invite/accept", { token, password });
+  }
+
+  accounts(): Promise<StaffAccount[]> {
+    return this.request("GET", "/accounts");
+  }
+
+  inviteAccount(input: NewAccount): Promise<{ account: StaffAccount } & LinkDelivery> {
+    return this.request("POST", "/accounts", input);
+  }
+
+  changeAccount(
+    id: number,
+    change: { displayName: string; role: StaffRole; guardId: number | null },
+  ): Promise<StaffAccount> {
+    return this.request("PUT", `/accounts/${id}`, change);
+  }
+
+  resendInvite(id: number): Promise<LinkDelivery> {
+    return this.request("POST", `/accounts/${id}/resend-invite`);
+  }
+
+  disableAccount(id: number): Promise<StaffAccount> {
+    return this.request("POST", `/accounts/${id}/disable`);
+  }
+
+  enableAccount(id: number): Promise<StaffAccount> {
+    return this.request("POST", `/accounts/${id}/enable`);
+  }
+
+  sendResetLink(id: number): Promise<LinkDelivery> {
+    return this.request("POST", `/accounts/${id}/reset-link`);
+  }
+
+  createBackupCode(id: number): Promise<{ code: string; expiresInMinutes: number }> {
+    return this.request("POST", `/accounts/${id}/backup-code`);
+  }
+
+  auditLog(): Promise<AuditEntry[]> {
+    return this.request("GET", "/audit");
   }
 
   zones(): Promise<Zone[]> {

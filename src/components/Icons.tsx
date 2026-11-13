@@ -94,6 +94,15 @@ export function LogoutIcon(props: IconProps) {
   );
 }
 
+export function ShieldIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3l7 3v5.5c0 4.4-3 7.8-7 9.5-4-1.7-7-5.1-7-9.5V6z" />
+      <path d="M9.5 12l2 2 3.5-3.5" />
+    </Icon>
+  );
+}
+
 export function ChevronIcon({ size, open }: IconProps & { open: boolean }) {
   return (
     <Icon size={size}>

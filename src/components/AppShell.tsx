@@ -4,10 +4,12 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ShellContext, type Shell } from "@/lib/live-context";
-import { clearApiKey } from "@/lib/session";
-import { describeSituation, tallyBracelets, type Selection } from "@/lib/status";
+import { describeSituation, sessionEndsAt, tallyBracelets, type Selection } from "@/lib/status";
+import { formatDateTime } from "@/lib/format";
+import type { Me } from "@/lib/types";
 import { useAlarm } from "@/lib/use-alarm";
 import { useLiveData } from "@/lib/use-live-data";
+import AccountMenu from "./AccountMenu";
 import ListPanel from "./ListPanel";
 import NavBar from "./NavBar";
 import PhoneSheet from "./PhoneSheet";
@@ -33,14 +35,15 @@ function useNow(intervalMs: number): number {
  * Lives above the pages, so the socket, the alarm and the map keep running while staff move
  * between them. Pages only add a sheet on top of the map; status and alerts stay visible.
  */
-export default function AppShell({ apiKey, children }: { apiKey: string; children: ReactNode }) {
-  const live = useLiveData(apiKey, clearApiKey);
+export default function AppShell({ me, children }: { me: Me; children: ReactNode }) {
+  const live = useLiveData();
   const now = useNow(5000);
   const alarm = useAlarm(live.openAlerts);
   const pathname = usePathname();
   const router = useRouter();
   const onMonitor = pathname === "/";
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   /** The unseen alerts when the panel was closed; anything newer reopens it. */
   const [collapsedOn, setCollapsedOn] = useState<ReadonlySet<string> | null>(null);
 
@@ -54,6 +57,7 @@ export default function AppShell({ apiKey, children }: { apiKey: string; childre
   const unseen = live.openAlerts.filter((a) => a.acknowledgedAt === null);
   const unseenKeys = unseen.map((a) => `${a.id}:${a.type}`);
   const collapsed = collapsedOn !== null && unseenKeys.every((key) => collapsedOn.has(key));
+  const sessionEnd = sessionEndsAt(live.offlineSince, now);
 
   // The count in the browser tab shows up even when another window covers the dashboard.
   useEffect(() => {
@@ -74,9 +78,10 @@ export default function AppShell({ apiKey, children }: { apiKey: string; childre
         // The map is hidden behind other pages, so a selection always brings it forward.
         if (pathname !== "/") router.push("/");
       },
-      logout: clearApiKey,
+      me,
+      openAccountMenu: () => setAccountMenuOpen(true),
     }),
-    [live, alarm, now, selection, pathname, router],
+    [live, alarm, now, selection, pathname, router, me],
   );
 
   return (
@@ -102,6 +107,15 @@ export default function AppShell({ apiKey, children }: { apiKey: string; childre
           tally={tally}
           urgent={unseen.some((a) => a.type === "alert")}
         />
+        {sessionEnd !== null && (
+          <p
+            role="alert"
+            className="pointer-events-auto rounded-xl bg-warn-tint px-4 py-2 text-sm text-[#7a3a04]"
+          >
+            Koneksi terputus. Anda akan keluar otomatis pada {formatDateTime(new Date(sessionEnd).toISOString())}{" "}
+            jika koneksi belum pulih dan tidak ada peringatan terbuka.
+          </p>
+        )}
         {live.error && (
           <p
             role="alert"
@@ -132,6 +146,8 @@ export default function AppShell({ apiKey, children }: { apiKey: string; childre
       )}
 
       {children}
+
+      {accountMenuOpen && <AccountMenu onClose={() => setAccountMenuOpen(false)} />}
     </ShellContext.Provider>
   );
 }

@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 import type { useAlarm } from "./use-alarm";
 import type { useLiveData } from "./use-live-data";
 import type { Selection } from "./status";
+import type { Me } from "./types";
 
 export interface Shell {
   live: ReturnType<typeof useLiveData>;
@@ -12,7 +13,8 @@ export interface Shell {
   now: number;
   selection: Selection | null;
   select: (braceletId: number) => void;
-  logout: () => void;
+  me: Me;
+  openAccountMenu: () => void;
 }
 
 /** Everything the pages share. AppShell owns it, so it survives moving between pages. */

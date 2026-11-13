@@ -65,7 +65,10 @@ function RunningRow({
       <p className="text-sm text-ink-soft">
         {assignment.zoneName}, petugas {assignment.guardName}
       </p>
-      <p className="text-sm text-ink-soft">Mulai {formatDateTime(assignment.startedAt)}</p>
+      <p className="text-sm text-ink-soft">
+        Mulai {formatDateTime(assignment.startedAt)} oleh{" "}
+        {assignment.startedByName ?? "sebelum akun staf"}
+      </p>
       {confirming ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="mr-auto text-sm font-semibold text-ink">Pemantauan gelang ini berhenti.</span>

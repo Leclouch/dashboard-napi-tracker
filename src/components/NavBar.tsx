@@ -10,6 +10,7 @@ import {
   LogoutIcon,
   MapIcon,
   PeopleIcon,
+  ShieldIcon,
   SlidersIcon,
   SoundOffIcon,
   SoundOnIcon,
@@ -21,6 +22,7 @@ interface NavItem {
   icon: ComponentType<IconProps>;
   /** No href: the page isn't built yet, so it shows as "Segera" and can't be clicked. */
   href?: string;
+  superadminOnly?: boolean;
 }
 
 const ITEMS: NavItem[] = [
@@ -29,6 +31,7 @@ const ITEMS: NavItem[] = [
   { label: "Riwayat", icon: ClockIcon },
   { label: "Data master", icon: PeopleIcon },
   { label: "Pengaturan", icon: SlidersIcon },
+  { label: "Akun", icon: ShieldIcon, href: "/akun", superadminOnly: true },
 ];
 
 /** Sound state in words: a silent alarm must never look like a working one. */
@@ -58,14 +61,16 @@ export function SoundButton() {
   );
 }
 
+/** Opens the menu that shows who is logged in, which matters at shift handover. */
 export function LogoutButton() {
-  const { logout } = useShell();
+  const { me, openAccountMenu } = useShell();
+  const label = `${me.displayName}: akun dan keluar`;
   return (
     <button
       type="button"
-      onClick={logout}
-      aria-label="Keluar"
-      title="Keluar"
+      onClick={openAccountMenu}
+      aria-label={label}
+      title={label}
       className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-ground"
     >
       <LogoutIcon />
@@ -76,6 +81,8 @@ export function LogoutButton() {
 /** Floating bar on desktop, bottom tab bar on phones. */
 export default function NavBar() {
   const pathname = usePathname();
+  const { me } = useShell();
+  const items = ITEMS.filter((item) => !item.superadminOnly || me.role === "superadmin");
 
   return (
     <>
@@ -86,7 +93,7 @@ export default function NavBar() {
         <span className="mr-1 hidden pl-3 text-base font-extrabold whitespace-nowrap text-brand xl:block">
           Gelang GPS
         </span>
-        {ITEMS.map(({ label, icon: ItemIcon, href }) => {
+        {items.map(({ label, icon: ItemIcon, href }) => {
           const active = href === pathname;
           if (!href) {
             return (
@@ -122,9 +129,11 @@ export default function NavBar() {
 
       <nav
         aria-label="Menu utama"
-        className="fixed inset-x-0 bottom-0 z-[1200] grid h-16 grid-cols-5 border-t border-line bg-white lg:hidden"
+        className={`fixed inset-x-0 bottom-0 z-[1200] grid h-16 border-t border-line bg-white lg:hidden ${
+          items.length > 5 ? "grid-cols-6" : "grid-cols-5"
+        }`}
       >
-        {ITEMS.map(({ label, icon: ItemIcon, href }) => {
+        {items.map(({ label, icon: ItemIcon, href }) => {
           const active = href === pathname;
           const short = label === "Data master" ? "Data" : label;
           if (!href) {
@@ -145,9 +154,9 @@ export default function NavBar() {
               key={label}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${
-                active ? "text-brand" : "text-ink-soft"
-              }`}
+              className={`flex flex-col items-center justify-center gap-0.5 font-semibold ${
+                items.length > 5 ? "text-[10px]" : "text-[11px]"
+              } ${active ? "text-brand" : "text-ink-soft"}`}
             >
               <ItemIcon size={22} />
               {short}

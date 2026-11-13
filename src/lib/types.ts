@@ -1,7 +1,7 @@
 // Shapes of the backend's JSON (backend-napi-tracker). Dates arrive as ISO 8601 strings.
 // Keep in sync with the backend: src/fixes/fixes-query.repository.ts, src/alerts/alerts.repository.ts,
 // src/alerts/episode-events.ts, src/assignments/assignments.repository.ts, src/zones/,
-// src/bracelets/ and the live events in src/live/live-events.ts.
+// src/bracelets/, src/auth/, src/accounts/ and the live events in src/live/live-events.ts.
 
 export type FixStatus = "normal" | "warn" | "alert" | "unassigned";
 export type EpisodeType = "warn" | "alert" | "signal_lost";
@@ -32,6 +32,9 @@ export interface Episode {
   escalatedAt: string | null;
   resolvedAt: string | null;
   acknowledgedAt: string | null;
+  acknowledgedBy: number | null;
+  /** Null when nobody has, or it happened before staff accounts existed. */
+  acknowledgedByName: string | null;
 }
 
 export interface EpisodeTransition {
@@ -60,6 +63,9 @@ export interface Assignment {
   zoneName: string;
   startedAt: string;
   endedAt: string | null;
+  /** Null for assignments from before staff accounts existed. */
+  startedByName: string | null;
+  endedByName: string | null;
 }
 
 export interface NewAssignment {
@@ -94,6 +100,59 @@ export interface Zone {
   warnMeters: number;
   alertMeters: number;
   createdAt: string;
+}
+
+export type StaffRole = "superadmin" | "staff";
+
+/** The logged in person (GET /auth/me). */
+export interface Me {
+  id: number;
+  email: string;
+  displayName: string;
+  role: StaffRole;
+  guardId: number | null;
+  expiresAt: string;
+}
+
+export type LoginStep =
+  | { next: "done" }
+  | { next: "code"; challenge: string; canRemember: boolean };
+
+export type AccountStatus = "invited" | "active" | "disabled";
+
+export interface StaffAccount {
+  id: number;
+  email: string;
+  displayName: string;
+  role: StaffRole;
+  guardId: number | null;
+  guardName: string | null;
+  status: AccountStatus;
+  createdAt: string;
+}
+
+export interface NewAccount {
+  email: string;
+  displayName: string;
+  role: StaffRole;
+  guardId: number | null;
+}
+
+/** The link only comes back when the email failed, to pass on by hand. */
+export interface LinkDelivery {
+  sent: boolean;
+  link?: string;
+}
+
+export interface AuditEntry {
+  id: number;
+  at: string;
+  actorId: number | null;
+  actorLabel: string;
+  action: string;
+  target: string | null;
+  detail: Record<string, unknown> | null;
+  ip: string | null;
 }
 
 /** Events pushed on the /live Socket.IO namespace. */

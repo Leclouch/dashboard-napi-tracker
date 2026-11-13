@@ -11,12 +11,19 @@ so explain what you change and why.
   (same version as the backend's socket.io). Ask before adding other dependencies.
 - UI text in Bahasa Indonesia; code and comments in English. Times shown in WIB (Asia/Jakarta).
 - Everything runs in the browser: the page is a client component tree; the browser calls the
-  backend directly (NEXT_PUBLIC_API_URL, backend CORS_ORIGINS must list this origin).
-- Login is the shared ADMIN_API_KEY, stored in sessionStorage via a small store read with
-  useSyncExternalStore (`src/lib/session.ts`). Staff accounts are the next step and replace it.
+  backend directly (NEXT_PUBLIC_API_URL, backend CORS_ORIGINS must list this origin). In production
+  that is app.<domain> calling api.<domain>, which must share a domain: the cookie is SameSite=Strict.
+- Login is staff accounts (backend CLAUDE.md, "Staff accounts"): an httpOnly cookie page code can't
+  read, so `src/lib/session.ts` asks GET /auth/me and exposes the answer as a small store read with
+  useSyncExternalStore. Never treat a failed check as logged out: only a 401 is. `/undangan` and
+  `/atur-sandi` (App's OPEN_PAGES) open without a login and read their token from the URL's #.
+- A session that ends on its own shows the login page with a notice that the alarm has stopped.
+  The menu behind the logout button shows who is logged in, for shift handovers.
+- `/akun` is superadmin only and hidden from staff in the navbar; the backend enforces it.
 - Data flow (`src/lib/use-live-data.ts`): load zones, latest fixes, open alerts and open assignments
   over REST on every (re)connect, then apply /live events (fix, episode, alert_acknowledged,
-  assignment). A REST snapshot never replaces a newer pushed fix.
+  assignment). A REST snapshot never replaces a newer pushed fix. A connected socket renews the
+  login; when the server refuses or hangs up, Socket.IO doesn't retry, so the hook does.
 - Leaflet only in `src/components/MapView.tsx`, loaded with next/dynamic `ssr: false`.
   GeoJSON is [lng, lat]; Leaflet is [lat, lng]; convert only in ringToLatLngs.
 - Response types in `src/lib/types.ts` mirror the backend; update both together.
@@ -30,8 +37,8 @@ so explain what you change and why.
   card headline; offline or failed data always beats a calm headline). Every status is a circle
   (`src/lib/glyph.ts`, `.status-dot` in globals.css), shared by the lists and the map. Faster
   means more urgent: green breathes slowly, yellow faster, red fastest with a ring closing in; grey
-  signal-lost has a ring spreading and fading. Not handed out: small, pale, still. Only the map and
-  alert cards animate. With reduced motion the rings hold still, so red and grey stay distinct.
+  signal-lost has a ring spreading and fading. Not handed out: small, pale, still. Only the map
+  animates; lists and alert cards show still circles. With reduced motion the rings hold still, so red and grey stay distinct.
   The status card fills red only for an unacknowledged out-of-zone alert.
 - Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
   the page exists.
@@ -43,6 +50,8 @@ so explain what you change and why.
   next.config.ts, the dev server keeps serving the old stylesheet (seen 2026-11-02). If new styles
   are missing or white text disappears, check this first.
 - Dev port 3001 (backend is 3000). `turbopack.root` is pinned because of a stray D:\yarn.lock.
+- Production: `Dockerfile` (output: "standalone"), run by the backend's docker-compose.yml.
+  NEXT_PUBLIC_API_URL is baked in at build time, so changing it means rebuilding the image.
 
 ## Rules
 - Run `npx tsc --noEmit`, `npm run lint` and `npm run build` before finishing a change.

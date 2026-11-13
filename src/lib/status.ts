@@ -9,6 +9,20 @@ export interface Selection {
   at: number;
 }
 
+const SESSION_IDLE_MS = 12 * 60 * 60 * 1000;
+const SESSION_WARNING_MS = 30 * 60 * 1000;
+
+/**
+ * When the login runs out, if that is close. A connected dashboard renews its session all the
+ * time, so this only matters while offline: the session then ends 12 hours after the connection
+ * dropped (the backend waits longer while an alert is open). Null when there's nothing to warn about.
+ */
+export function sessionEndsAt(offlineSince: number | null, now: number): number | null {
+  if (offlineSince === null) return null;
+  const endsAt = offlineSince + SESSION_IDLE_MS;
+  return endsAt - now <= SESSION_WARNING_MS ? endsAt : null;
+}
+
 export function displayStatus(alert: Episode | undefined, fix: Fix | undefined): DisplayStatus | null {
   return alert?.type ?? fix?.status ?? null;
 }

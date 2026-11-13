@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { Api, API_URL, ApiError } from "./api";
+import { checkSession, sessionEnded } from "./session";
 import type { Assignment, Episode, Fix, ServerToClientEvents, Zone } from "./types";
 
 export type Connection = "connecting" | "online" | "offline";
@@ -14,11 +15,15 @@ export interface LiveData {
   openAlerts: Episode[];
   openAssignments: Assignment[];
   connection: Connection;
+  /** When the connection dropped, or null while online. Being connected renews the login. */
+  offlineSince: number | null;
   /** True once the first REST snapshot arrived; before that, empty lists mean nothing. */
   loaded: boolean;
   /** Last load error shown to the user, or null. */
   error: string | null;
 }
+
+const RETRY_MS = 5000;
 
 const EMPTY: LiveData = {
   zones: [],
@@ -26,6 +31,7 @@ const EMPTY: LiveData = {
   openAlerts: [],
   openAssignments: [],
   connection: "connecting",
+  offlineSince: null,
   loaded: false,
   error: null,
 };
@@ -41,19 +47,13 @@ function withFix(fixes: Record<number, Fix>, fix: Fix): Record<number, Fix> {
  * Loads the current state over REST, then keeps it up to date from the /live push.
  * Pushes are not replayed, so everything is reloaded after every (re)connect.
  */
-export function useLiveData(apiKey: string, onUnauthorized: () => void) {
-  const api = useMemo(() => new Api(apiKey), [apiKey]);
+export function useLiveData() {
+  const api = useMemo(() => new Api(), []);
   const [data, setData] = useState<LiveData>(EMPTY);
-
-  // Kept in a ref so a new callback from the parent doesn't reconnect the socket.
-  const onUnauthorizedRef = useRef(onUnauthorized);
-  useEffect(() => {
-    onUnauthorizedRef.current = onUnauthorized;
-  }, [onUnauthorized]);
 
   const fail = useCallback((error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
-      onUnauthorizedRef.current();
+      sessionEnded();
       return;
     }
     const message = error instanceof Error ? error.message : "Terjadi kesalahan";
@@ -97,23 +97,50 @@ export function useLiveData(apiKey: string, onUnauthorized: () => void) {
   }, [api, fail]);
 
   useEffect(() => {
-    const socket: Socket<ServerToClientEvents> = io(`${API_URL}/live`, {
-      auth: { apiKey },
-    });
+    // withCredentials: the browser sends the login cookie with the handshake.
+    const socket: Socket<ServerToClientEvents> = io(`${API_URL}/live`, { withCredentials: true });
+
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const retryLater = () => {
+      clearTimeout(retry);
+      retry = setTimeout(() => socket.connect(), RETRY_MS);
+    };
+    const wentOffline = () =>
+      setData((d) => ({
+        ...d,
+        connection: "offline",
+        offlineSince: d.offlineSince ?? Date.now(),
+      }));
 
     socket.on("connect", () => {
-      setData((d) => ({ ...d, connection: "online" }));
+      setData((d) => ({ ...d, connection: "online", offlineSince: null }));
       void reloadAll();
+      // Picks up changes made while away, such as a new role.
+      void checkSession();
     });
-    socket.on("disconnect", () => setData((d) => ({ ...d, connection: "offline" })));
+    socket.on("disconnect", (reason) => {
+      wentOffline();
+      // The server hung up on purpose, so Socket.IO won't reconnect by itself. Ask why: the
+      // session may have ended, or it may just be a restart.
+      if (reason === "io server disconnect") {
+        api.me().then(
+          () => socket.connect(),
+          (error) => {
+            if (error instanceof ApiError && error.status === 401) sessionEnded();
+            else retryLater();
+          },
+        );
+      }
+    });
     socket.on("connect_error", (error) => {
       if (error.message === "unauthorized") {
         socket.disconnect();
-        onUnauthorizedRef.current();
+        sessionEnded();
         return;
       }
-      // Socket.IO keeps retrying on its own.
-      setData((d) => ({ ...d, connection: "offline" }));
+      wentOffline();
+      // Refused by the server ("unavailable"): Socket.IO only retries network errors by itself.
+      if (!socket.active) retryLater();
     });
 
     socket.on("fix", (fix) => setData((d) => ({ ...d, fixes: withFix(d.fixes, fix) })));
@@ -127,9 +154,10 @@ export function useLiveData(apiKey: string, onUnauthorized: () => void) {
     socket.on("assignment", reloadAssignments);
 
     return () => {
+      clearTimeout(retry);
       socket.disconnect();
     };
-  }, [apiKey, reloadAll, reloadAlerts, reloadAssignments]);
+  }, [api, reloadAll, reloadAlerts, reloadAssignments]);
 
   const acknowledge = useCallback(
     async (alertId: number) => {

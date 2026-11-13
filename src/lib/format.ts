@@ -24,6 +24,28 @@ export const STATUS_COLOR: Record<FixStatus | EpisodeType, string> = {
   unassigned: "#5b6472",
 };
 
+/** audit_log actions in words. An unknown action shows as it is. */
+export const AUDIT_LABEL: Record<string, string> = {
+  login: "Masuk",
+  login_failed: "Gagal masuk",
+  login_code_failed: "Kode masuk salah",
+  logout: "Keluar",
+  logout_everywhere: "Keluar dari semua perangkat",
+  account_invited: "Akun diundang",
+  invite_resent: "Undangan dikirim ulang",
+  invite_accepted: "Undangan diterima",
+  account_changed: "Akun diubah",
+  account_disabled: "Akun dinonaktifkan",
+  account_enabled: "Akun diaktifkan",
+  reset_requested: "Tautan sandi diminta",
+  reset_refused_superadmin: "Superadmin meminta tautan sandi (ditolak)",
+  reset_link_created: "Tautan sandi dibuat",
+  password_reset: "Kata sandi diganti",
+  backup_code_created: "Kode cadangan dibuat",
+  settings_changed: "Pengaturan diubah",
+  zone_created: "Zona dibuat",
+};
+
 const timeFormat = new Intl.DateTimeFormat("id-ID", {
   timeZone: "Asia/Jakarta",
   hour: "2-digit",
