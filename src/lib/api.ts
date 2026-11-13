@@ -11,6 +11,8 @@ import type {
   NewAssignment,
   Person,
   PersonKind,
+  Settings,
+  SettingsPatch,
   StaffAccount,
   StaffRole,
   Trail,
@@ -146,6 +148,15 @@ export class Api {
 
   zones(): Promise<Zone[]> {
     return this.request("GET", "/zones");
+  }
+
+  settings(): Promise<Settings> {
+    return this.request("GET", "/settings");
+  }
+
+  /** Superadmin only (403 for staff). Send just the fields that change. */
+  updateSettings(patch: SettingsPatch): Promise<Settings> {
+    return this.request("PUT", "/settings", patch);
   }
 
   latestFixes(): Promise<Fix[]> {

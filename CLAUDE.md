@@ -57,6 +57,11 @@ so explain what you change and why.
   so when it hits that. Each alert shows who held the bracelet when it opened (the backend joins
   assignments by time), how long it lasted and how fast staff acknowledged it. Not built: replaying a
   person's movement for a past period (needs a per-bracelet date-range fixes endpoint) and export.
+- Pengaturan (`/pengaturan`, `SettingsSheet.tsx`, rules in `src/lib/settings.ts`): report intervals per
+  state, signal-lost threshold, and the debounce counts. Everyone can read it, only a superadmin can
+  edit (the backend answers 403 otherwise). Saving asks first and lists "from -> to", then sends only
+  the changed fields so the audit log shows what moved. Limits mirror the backend's; the backend
+  enforces them. Alarm counts apply at once; a bracelet gets a new interval at its next report.
 - Navbar items without an href show as "Segera" (`src/components/NavBar.tsx`); add the href when
   the page exists.
 - Alarm (`src/lib/use-alarm.ts`): Web Audio beep, no sound file. Alert and signal_lost repeat every

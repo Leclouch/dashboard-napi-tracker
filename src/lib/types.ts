@@ -103,6 +103,23 @@ export interface Bracelet {
 }
 
 /** An inmate or a guard; both have the same shape in the backend. */
+/** Backend: src/settings/settings.types.ts. Seconds between reports, and alarm timing. */
+export interface Settings {
+  intervals: { normal: number; warn: number; alert: number; unassigned: number };
+  /** signal_lost opens after this many missed reports. */
+  signalLostMultiplier: number;
+  /** Consecutive reports needed to open, escalate and resolve an alert. */
+  debounce: { open: number; escalate: number; resolve: number };
+  updatedAt: string;
+}
+
+/** What PUT /settings takes: only the fields that change. */
+export interface SettingsPatch {
+  intervals?: Partial<Settings["intervals"]>;
+  signalLostMultiplier?: number;
+  debounce?: Partial<Settings["debounce"]>;
+}
+
 /** Which list a person belongs to: the backend's /inmates or /guards. */
 export type PersonKind = "inmates" | "guards";
 

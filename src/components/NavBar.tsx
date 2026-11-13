@@ -30,7 +30,7 @@ const ITEMS: NavItem[] = [
   { label: "Penugasan", icon: ClipboardIcon, href: "/penugasan" },
   { label: "Riwayat", icon: ClockIcon, href: "/riwayat" },
   { label: "Data master", icon: PeopleIcon, href: "/data-master" },
-  { label: "Pengaturan", icon: SlidersIcon },
+  { label: "Pengaturan", icon: SlidersIcon, href: "/pengaturan" },
   { label: "Akun", icon: ShieldIcon, href: "/akun", superadminOnly: true },
 ];
 
