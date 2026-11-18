@@ -16,6 +16,8 @@ import NavBar from "./NavBar";
 import PhoneSheet from "./PhoneSheet";
 import StatusCard from "./StatusCard";
 import TrailRange from "./TrailRange";
+import ZoneDrawBar from "./ZoneDrawBar";
+import type { ZoneDraft } from "@/lib/zone-draft";
 
 // Leaflet needs `window`, so the map is never prerendered on the server.
 const MapView = dynamic(() => import("./MapView"), {
@@ -58,6 +60,7 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
   /** Same idea for the phone's sheet: the unseen alerts when it was closed, or null while open. */
   const [phoneClosedOn, setPhoneClosedOn] = useState<ReadonlySet<string> | null>(null);
   const [sheetPath, setSheetPath] = useState(pathname);
+  const [zoneDraft, setZoneDraft] = useState<ZoneDraft | null>(null);
 
   const tally = tallyBracelets(live.openAssignments, live.openAlerts, live.fixes);
   const situation = describeSituation({
@@ -79,6 +82,8 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
   if (pathname !== sheetPath) {
     setSheetPath(pathname);
     setPhoneClosedOn(null);
+    // The zone editor unmounts with its page, so its unsaved outline goes too.
+    setZoneDraft(null);
   } else if (phoneClosedOn !== null && onMonitor && !unseenKeys.every((key) => phoneClosedOn.has(key))) {
     setPhoneClosedOn(null);
   }
@@ -110,8 +115,9 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
         closed: phoneClosed,
         setClosed: (closed) => setPhoneClosedOn(closed ? new Set(unseenKeys) : null),
       },
+      zoneDraft: { draft: zoneDraft, set: setZoneDraft },
     }),
-    [live, alarm, now, selection, pathname, router, me, phoneClosed, unseenKeys],
+    [live, alarm, now, selection, pathname, router, me, phoneClosed, unseenKeys, zoneDraft],
   );
 
   return (
@@ -129,11 +135,20 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
           sheetClosed={phoneClosed}
           onSelect={shell.select}
           onClearSelection={() => setSelection(null)}
+          zoneDraft={zoneDraft}
+          onZoneDraftChange={setZoneDraft}
         />
       </div>
 
       <NavBar />
       {onMonitor && selection && <TrailRange value={trailMinutes} onChange={setTrailMinutes} />}
+      {zoneDraft && phoneClosed && (
+        <ZoneDrawBar
+          draft={zoneDraft}
+          onChange={setZoneDraft}
+          onDone={() => shell.phoneSheet.setClosed(false)}
+        />
+      )}
 
       <div className="pointer-events-none fixed inset-x-2 top-2 z-[1100] flex flex-col gap-3 lg:inset-x-auto lg:top-3 lg:right-3 lg:bottom-3 lg:w-[23rem]">
         <StatusCard

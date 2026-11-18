@@ -96,10 +96,17 @@ export interface NewAssignment {
 export interface Bracelet {
   id: number;
   deviceLabel: string;
-  status: string;
+  /** A retired (lost, broken) bracelet can't be handed out. It is never renamed: see the backend. */
+  status: "active" | "inactive";
   createdAt: string;
   openAssignmentId: number | null;
   lastFixAt: string | null;
+}
+
+/** POST /bracelets answers with the config.h to paste into the firmware before flashing. */
+export interface NewBracelet {
+  bracelet: Omit<Bracelet, "openAssignmentId" | "lastFixAt">;
+  firmwareConfig: string;
 }
 
 /** An inmate or a guard; both have the same shape in the backend. */
@@ -132,12 +139,25 @@ export interface Person {
 }
 
 /** GeoJSON Polygon: coordinates are [lng, lat]. Leaflet wants [lat, lng]. */
-export interface Zone {
-  id: number;
+export interface ZoneBoundary {
+  type: "Polygon";
+  /** One closed ring: the last position repeats the first. */
+  coordinates: [number, number][][];
+}
+
+export interface ZoneInput {
   name: string;
-  boundary: { type: "Polygon"; coordinates: [number, number][][] };
+  boundary: ZoneBoundary;
   warnMeters: number;
   alertMeters: number;
+}
+
+export interface Zone extends ZoneInput {
+  id: number;
+  /** A retired zone can't be chosen for a new assignment and isn't drawn on the map. */
+  status: "active" | "inactive";
+  /** Bracelets handed out to this zone right now. */
+  openAssignments: number;
   createdAt: string;
 }
 

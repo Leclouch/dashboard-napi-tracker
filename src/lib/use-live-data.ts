@@ -74,6 +74,14 @@ export function useLiveData() {
       .catch(fail);
   }, [api, fail]);
 
+  /** Zones aren't pushed over /live, so a page that changed one asks for them again. */
+  const reloadZones = useCallback(() => {
+    api
+      .zones()
+      .then((zones) => setData((d) => ({ ...d, zones, error: null })))
+      .catch(fail);
+  }, [api, fail]);
+
   const reloadAll = useCallback(async () => {
     try {
       const [zones, latest, openAlerts, openAssignments] = await Promise.all([
@@ -175,5 +183,5 @@ export function useLiveData() {
     [api, fail],
   );
 
-  return { ...data, api, acknowledge, reloadAssignments };
+  return { ...data, api, acknowledge, reloadAssignments, reloadZones };
 }

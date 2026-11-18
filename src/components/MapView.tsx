@@ -2,7 +2,7 @@
 
 // Leaflet touches `window`, so this file is only loaded in the browser (see AppShell: ssr false).
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { divIcon, latLngBounds, type DivIcon, type LatLngTuple } from "leaflet";
 import {
   AttributionControl,
@@ -24,6 +24,15 @@ import { statusDotHtml } from "@/lib/glyph";
 import type { DisplayStatus, Selection } from "@/lib/status";
 import { runOpacity, spaceDots, trailDots, trailRuns, type TrailDot } from "@/lib/trail";
 import type { Assignment, Episode, Fix, FixStatus, TrailPoint, Zone } from "@/lib/types";
+import {
+  addCorner,
+  corner,
+  MIN_CORNERS,
+  moveCorner,
+  removeCorner,
+  type Corner,
+  type ZoneDraft,
+} from "@/lib/zone-draft";
 
 /** Placeholder until zones load: around Lapas Cebongan. */
 const DEFAULT_CENTER: LatLngTuple = [-7.74, 110.3423];
@@ -37,6 +46,13 @@ const TRAIL_COLOR: Record<FixStatus, string> = {
   alert: "#b91c1c",
   unassigned: "#6b7280",
 };
+
+/**
+ * The zone outline. Not a status colour (green, amber, red, grey), not blue (blue isn't a status
+ * either, see CLAUDE.md), and not grey or green, which vanish into satellite terrain. Violet is
+ * rare in imagery and unlike every status.
+ */
+const ZONE_COLOR = "#c026d3";
 
 const STREET = "Peta jalan";
 const SATELLITE = "Satelit";
@@ -76,6 +92,31 @@ function coveredEdges(map: { getSize(): { y: number } }, sheetClosed: boolean) {
 function ringToLatLngs(ring: [number, number][]): LatLngTuple[] {
   return ring.map(([lng, lat]) => [lat, lng]);
 }
+
+/** Leaflet [lat, lng] -> a GeoJSON corner [lng, lat]. The only other place the order flips. */
+function latLngToCorner({ lat, lng }: { lat: number; lng: number }): Corner {
+  return corner(lng, lat);
+}
+
+/**
+ * The map hidden behind a page's sheet while a zone is drawn. On a desktop the sheet is a panel
+ * at the left (PageSheet: min(46rem, 100vw - 23rem - 2.25rem) plus its 12 px margin).
+ */
+function pageCoveredEdges(map: { getSize(): { y: number } }, sheetClosed: boolean) {
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    const sheet = Math.min(736, window.innerWidth - 368 - 36);
+    return { top: 80, right: 392, bottom: 0, left: sheet + 12 };
+  }
+  return coveredEdges(map, sheetClosed);
+}
+
+/** A corner of the zone being drawn: a small square, unlike the round status dots. */
+const cornerIcon = divIcon({
+  className: "",
+  html: `<div style="width:16px;height:16px;border-radius:4px;background:#fff;border:3px solid ${ZONE_COLOR};box-shadow:0 1px 3px rgb(0 0 0/.4);cursor:move"></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
 
 const icons = new Map<string, DivIcon>();
 
@@ -184,12 +225,114 @@ function TrailDots({ dots }: { dots: TrailDot[] }) {
   ));
 }
 
-function MapEvents({ onClear }: { onClear: () => void }) {
+function MapEvents({ onClick }: { onClick: (at: { lat: number; lng: number }) => void }) {
   useMapEvents({
-    click: onClear,
+    click: (event) => onClick(event.latlng),
     baselayerchange: (event) => writeLayer(event.name),
   });
   return null;
+}
+
+/**
+ * Shows the whole zone when its editing starts (or a new one is begun with corners), so the
+ * superadmin doesn't have to look for it. After that the view is theirs again.
+ */
+function FitToDraft({ draft, sheetClosed }: { draft: ZoneDraft | null; sheetClosed: boolean }) {
+  const map = useMap();
+  const fittedFor = useRef<number | "new" | null>(null);
+  const editing = draft === null ? null : (draft.zoneId ?? "new");
+  const corners = draft?.corners;
+
+  useEffect(() => {
+    if (editing === null) {
+      fittedFor.current = null;
+      return;
+    }
+    if (fittedFor.current === editing || !corners || corners.length < MIN_CORNERS) return;
+    fittedFor.current = editing;
+    const covered = pageCoveredEdges(map, sheetClosed);
+    map.fitBounds(latLngBounds(ringToLatLngs(corners)), {
+      paddingTopLeft: [covered.left + 40, covered.top + 40],
+      paddingBottomRight: [covered.right + 40, covered.bottom + 40],
+      maxZoom: 19,
+    });
+  }, [map, editing, corners, sheetClosed]);
+
+  // A crosshair says "a click here adds a corner".
+  useEffect(() => {
+    const container = map.getContainer();
+    container.style.cursor = editing === null ? "" : "crosshair";
+    return () => {
+      container.style.cursor = "";
+    };
+  }, [map, editing]);
+  return null;
+}
+
+/**
+ * The zone being drawn: its outline (dashed, so it reads as unsaved) and a square handle per
+ * corner. Drag a handle to move the corner; click it to remove the corner.
+ */
+function DraftLayer({ draft, onChange }: { draft: ZoneDraft; onChange: (draft: ZoneDraft) => void }) {
+  // Leaflet calls these handlers long after render; the ref always holds the latest draft.
+  const draftRef = useRef(draft);
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+  const dragStarted = useRef(false);
+  const positions = ringToLatLngs(draft.corners);
+  const Outline = draft.corners.length >= MIN_CORNERS ? Polygon : Polyline;
+
+  return (
+    <>
+      {positions.length >= 2 && (
+        <>
+          <Outline
+            positions={positions}
+            pathOptions={{ color: "#ffffff", weight: 6, opacity: 0.9, fill: false, interactive: false }}
+          />
+          <Outline
+            positions={positions}
+            pathOptions={{
+              color: ZONE_COLOR,
+              weight: 3,
+              dashArray: "8 6",
+              fillColor: ZONE_COLOR,
+              fillOpacity: 0.15,
+              interactive: false,
+            }}
+          />
+        </>
+      )}
+      {positions.map((position, index) => (
+        <Marker
+          key={index}
+          position={position}
+          icon={cornerIcon}
+          draggable
+          bubblingMouseEvents={false}
+          keyboard={false}
+          zIndexOffset={3000}
+          eventHandlers={{
+            dragstart: () => {
+              dragStarted.current = true;
+            },
+            drag: (event) => {
+              const point = latLngToCorner((event.target as { getLatLng(): { lat: number; lng: number } }).getLatLng());
+              onChange(moveCorner(draftRef.current, index, point, dragStarted.current));
+              dragStarted.current = false;
+            },
+            click: () => onChange(removeCorner(draftRef.current, index)),
+          }}
+        >
+          <Tooltip direction="top" offset={[0, -8]} className="bracelet-tooltip">
+            Titik {index + 1}: geser untuk memindahkan
+            {draft.corners.length > MIN_CORNERS ? ", klik untuk menghapus" : ""}
+          </Tooltip>
+        </Marker>
+      ))}
+    </>
+  );
 }
 
 interface Props {
@@ -205,6 +348,9 @@ interface Props {
   sheetClosed: boolean;
   onSelect: (braceletId: number) => void;
   onClearSelection: () => void;
+  /** A zone being drawn on the Zona tab of Data master; clicks then add corners. */
+  zoneDraft: ZoneDraft | null;
+  onZoneDraftChange: (draft: ZoneDraft) => void;
 }
 
 export default function MapView({
@@ -218,8 +364,13 @@ export default function MapView({
   sheetClosed,
   onSelect,
   onClearSelection,
+  zoneDraft,
+  onZoneDraftChange,
 }: Props) {
   const [initialLayer] = useState(readLayer);
+  // Retired zones have no bracelets, so they'd only clutter the map. The zone being edited is
+  // drawn by DraftLayer instead, so the old outline doesn't sit under the new one.
+  const shownZones = zones.filter((z) => z.status === "active" && z.id !== zoneDraft?.zoneId);
   const runs = useMemo(() => trailRuns(trail), [trail]);
   const dots = useMemo(() => trailDots(trail), [trail]);
   const alertByBracelet = new Map(openAlerts.map((a) => [a.braceletId, a]));
@@ -259,22 +410,36 @@ export default function MapView({
         </LayersControl.BaseLayer>
       </LayersControl>
 
-      <FitToZones zones={zones} sheetClosed={sheetClosed} />
+      <FitToZones zones={zones.filter((z) => z.status === "active")} sheetClosed={sheetClosed} />
       <FlyToSelection selection={selection} fixes={fixes} sheetClosed={sheetClosed} />
-      <MapEvents onClear={onClearSelection} />
+      <FitToDraft draft={zoneDraft} sheetClosed={sheetClosed} />
+      <MapEvents
+        onClick={(at) => {
+          if (zoneDraft) onZoneDraftChange(addCorner(zoneDraft, latLngToCorner(at)));
+          else onClearSelection();
+        }}
+      />
 
-      {zones.map((zone) => (
-        <Polygon
-          key={zone.id}
-          positions={ringToLatLngs(zone.boundary.coordinates[0])}
-          // Neutral on purpose: on the map, blue must not read as a status.
-          pathOptions={{ color: "#4a5a75", weight: 2, fillOpacity: 0.07 }}
-        >
-          <Tooltip sticky className="bracelet-tooltip">
-            {zone.name}
-          </Tooltip>
-        </Polygon>
-      ))}
+      {shownZones.map((zone) => {
+        const positions = ringToLatLngs(zone.boundary.coordinates[0]);
+        return (
+          <Fragment key={zone.id}>
+            {/* A white halo under the outline keeps it readable on any imagery, light or dark. */}
+            <Polygon
+              positions={positions}
+              pathOptions={{ color: "#ffffff", weight: 6, opacity: 0.85, fill: false, interactive: false }}
+            />
+            <Polygon
+              positions={positions}
+              pathOptions={{ color: ZONE_COLOR, weight: 3, fillColor: ZONE_COLOR, fillOpacity: 0.1 }}
+            >
+              <Tooltip sticky className="bracelet-tooltip">
+                {zone.name}
+              </Tooltip>
+            </Polygon>
+          </Fragment>
+        );
+      })}
 
       {/* Not interactive, so a click on the line still reaches the map and clears the selection. */}
       {runs.map((run, i) => (
@@ -292,6 +457,7 @@ export default function MapView({
         />
       ))}
       <TrailDots dots={dots} />
+      {zoneDraft && <DraftLayer draft={zoneDraft} onChange={onZoneDraftChange} />}
 
       {fixes.map((fix) => {
         const alert = alertByBracelet.get(fix.braceletId);

@@ -9,6 +9,7 @@ import type {
   Me,
   NewAccount,
   NewAssignment,
+  NewBracelet,
   Person,
   PersonKind,
   Settings,
@@ -17,6 +18,7 @@ import type {
   StaffRole,
   Trail,
   Zone,
+  ZoneInput,
 } from "./types";
 
 /**
@@ -31,6 +33,8 @@ export class ApiError extends Error {
     message: string,
     /** Set on 429: how long a login is locked. */
     readonly retryAfterSeconds?: number,
+    /** The backend's own reasons (English, for matching, never shown as they are). */
+    readonly serverMessages: string[] = [],
   ) {
     super(message);
   }
@@ -56,11 +60,16 @@ export class Api {
       throw new ApiError(0, "Server tidak dapat dihubungi");
     }
     if (!response.ok) {
-      const details = (await response.json().catch(() => null)) as { retryAfterSeconds?: number } | null;
+      const details = (await response.json().catch(() => null)) as {
+        retryAfterSeconds?: number;
+        message?: string | string[];
+      } | null;
+      const messages = details?.message;
       throw new ApiError(
         response.status,
         `Permintaan gagal (HTTP ${response.status})`,
         details?.retryAfterSeconds,
+        Array.isArray(messages) ? messages : typeof messages === "string" ? [messages] : [],
       );
     }
     if (response.status === 204) return undefined as T;
@@ -150,6 +159,25 @@ export class Api {
     return this.request("GET", "/zones");
   }
 
+  /** Superadmin only. 400 when the shape is invalid, e.g. edges that cross. */
+  createZone(input: ZoneInput): Promise<Zone> {
+    return this.request("POST", "/zones", input);
+  }
+
+  /** Superadmin only. Send just the fields that change; allowed while bracelets use the zone. */
+  updateZone(id: number, patch: Partial<ZoneInput>): Promise<Zone> {
+    return this.request("PUT", `/zones/${id}`, patch);
+  }
+
+  /** 409 while a bracelet is handed out to the zone. */
+  deactivateZone(id: number): Promise<Zone> {
+    return this.request("POST", `/zones/${id}/deactivate`);
+  }
+
+  reactivateZone(id: number): Promise<Zone> {
+    return this.request("POST", `/zones/${id}/reactivate`);
+  }
+
   settings(): Promise<Settings> {
     return this.request("GET", "/settings");
   }
@@ -192,6 +220,25 @@ export class Api {
 
   bracelets(): Promise<Bracelet[]> {
     return this.request("GET", "/bracelets");
+  }
+
+  /** Superadmin only. 409 when the label is taken. */
+  addBracelet(deviceLabel: string): Promise<NewBracelet> {
+    return this.request("POST", "/bracelets", { deviceLabel });
+  }
+
+  /** The same config.h as when the bracelet was added, for flashing it again. Superadmin only. */
+  braceletFirmwareConfig(id: number): Promise<{ firmwareConfig: string }> {
+    return this.request("GET", `/bracelets/${id}/firmware-config`);
+  }
+
+  /** 409 while the bracelet is handed out. */
+  deactivateBracelet(id: number): Promise<Bracelet> {
+    return this.request("POST", `/bracelets/${id}/deactivate`);
+  }
+
+  reactivateBracelet(id: number): Promise<Bracelet> {
+    return this.request("POST", `/bracelets/${id}/reactivate`);
   }
 
   inmates(): Promise<Person[]> {

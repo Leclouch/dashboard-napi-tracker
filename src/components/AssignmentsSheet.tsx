@@ -236,8 +236,10 @@ export default function AssignmentsSheet() {
               label="Zona"
               value={zoneId}
               onChange={setZoneId}
-              emptyText="Belum ada zona"
-              options={zones.map((z) => ({ value: z.id, label: z.name }))}
+              emptyText="Belum ada zona aktif"
+              options={zones
+                .filter((z) => z.status === "active")
+                .map((z) => ({ value: z.id, label: z.name }))}
             />
             <button
               type="submit"

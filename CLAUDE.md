@@ -25,7 +25,8 @@ so explain what you change and why.
   assignment). A REST snapshot never replaces a newer pushed fix. A connected socket renews the
   login; when the server refuses or hangs up, Socket.IO doesn't retry, so the hook does.
 - Leaflet only in `src/components/MapView.tsx`, loaded with next/dynamic `ssr: false`.
-  GeoJSON is [lng, lat]; Leaflet is [lat, lng]; convert only in ringToLatLngs.
+  GeoJSON is [lng, lat]; Leaflet is [lat, lng]; convert only in ringToLatLngs and, for a click or a
+  dragged zone corner going back, latLngToCorner.
 - Response types in `src/lib/types.ts` mirror the backend; update both together.
 - App structure: `AppShell` sits above all pages (mounted by `App` in the root layout) and owns the
   map, live data, alarm and selection, shared through `useShell()` (`src/lib/live-context.ts`). Pages
@@ -34,6 +35,8 @@ so explain what you change and why.
   Brand blue is #005de0 (hover #004cb8), made lighter than the original #0046a8 on 2026-11-14; it
   was chosen as the lightest that keeps AA contrast for blue text on the selected-row tint (4.9:1).
   Keep it off the map, because blue isn't a status. Warn dots use amber #fbbf24, text keeps the darker amber.
+  The zone outline is violet #c026d3 with a white halo (MapView `ZONE_COLOR`): grey and green vanish
+  into satellite terrain, and the status colours and blue are taken.
   Buttons and the bars that hold them use `.squircle` (globals.css: 14 px radius plus `corner-shape:
   squircle`, which only Chromium 139+ draws as a true squircle; elsewhere it is a plain rounded
   corner). A bar around buttons sets `--squircle` to the button radius plus its padding. Only dots,
@@ -50,12 +53,26 @@ so explain what you change and why.
   from GET /fixes/trails, then each live fix appended. Drawn in MapView as lines plus a small dot per reported position (hover shows the
   time), coloured by status and fading with age; GPS jitter under 3 m is thinned out. Only the selected
   bracelet gets one.
-- Data master (`/data-master`, `DataMasterSheet.tsx`): warga binaan and petugas tabs, open to all staff.
-  Add (a name that already exists only asks "Tetap tambahkan", it never refuses: two people can share
-  a name), rename, deactivate, reactivate. People are never deleted: assignments, alerts and the audit
-  log point at them. Deactivating is refused while someone has an open assignment (the backend
-  answers 409; the page hides the button and links to Penugasan). Bracelets stay in /admin
-  (superadmin only; adding one needs the firmware config and a manual EMQX user).
+- Data master (`/data-master`, `DataMasterSheet.tsx`): tabs Warga binaan, Petugas, Gelang, Zona.
+  People (open to all staff): add (a name that already exists only asks "Tetap tambahkan", it never
+  refuses: two people can share a name), rename, deactivate, reactivate. Nothing is ever deleted:
+  assignments, fixes, alerts and the audit log point at it. Deactivating anything is refused while it
+  has an open assignment (the backend answers 409; the page hides the button and links to Penugasan).
+  Shared styles and `errorText` are in `data-master-ui.ts`.
+- Gelang tab (`BraceletsTab.tsx`): everyone sees the list; a superadmin adds (shows the config.h to copy
+  plus the EMQX checklist; the broker user is still made by hand), sees the config.h again, retires and
+  reactivates. No rename: the label is the MQTT topic and the EMQX username in the firmware.
+- Zona tab (`ZonesTab.tsx`): everyone sees the list; a superadmin adds, edits (name, both distances,
+  the outline) and retires. The outline is drawn on the shared map: the draft (`src/lib/zone-draft.ts`,
+  pure: corners [lng, lat], open ring, undo history) lives in the shell (`zoneDraft`), because MapView
+  draws it. A click adds a corner into the nearest edge, a corner drags, a click on a corner removes
+  it (never below 3). Leaving the page or the tab drops the draft. On a phone the sheet closes to draw
+  and `ZoneDrawBar` floats over the map. Saving an existing zone always confirms, listing "from -> to"
+  and how many bracelets use it (edited in place: they are checked against the new outline from their
+  next fix), then sends only the changed fields. The backend's 400 reasons reach the page as
+  `ApiError.serverMessages`; a self-intersecting outline gets its own message. Retired zones aren't
+  drawn on the map or offered in Penugasan. Zones aren't pushed over /live: the page that changed one
+  calls `reloadZones`, other screens see it on their next reconnect. /admin stays as a fallback for now.
 - Riwayat (`/riwayat`, `HistorySheet.tsx`, pure summary in `src/lib/history.ts`): past alerts and past
   assignments for a period, read-only, open to all staff. Dates are WIB days (`wibDay` in format.ts),
   both ends included, default the last 7 days; the backend returns at most 200 rows and the page says

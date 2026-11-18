@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ApiError } from "@/lib/api";
-import { AUDIT_LABEL, formatDateTime, personAuditText } from "@/lib/format";
+import { AUDIT_LABEL, formatDateTime, auditTargetText } from "@/lib/format";
 import { useShell } from "@/lib/live-context";
 import type {
   AccountStatus,
@@ -269,7 +269,7 @@ function AuditList({ entries, accounts }: { entries: AuditEntry[]; accounts: Sta
   function targetText(entry: AuditEntry): string | null {
     const { target } = entry;
     const id = target?.startsWith("account:") ? Number(target.slice("account:".length)) : null;
-    if (id === null) return personAuditText(target, entry.detail);
+    if (id === null) return auditTargetText(target, entry.detail);
     return accounts.find((account) => account.id === id)?.displayName ?? target;
   }
 

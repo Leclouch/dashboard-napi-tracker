@@ -5,6 +5,7 @@ import type { useAlarm } from "./use-alarm";
 import type { useLiveData } from "./use-live-data";
 import type { Selection } from "./status";
 import type { Me } from "./types";
+import type { ZoneDraft } from "./zone-draft";
 
 export interface Shell {
   live: ReturnType<typeof useLiveData>;
@@ -20,6 +21,11 @@ export interface Shell {
    * Closed means only the map, the status card and the tab bar show.
    */
   phoneSheet: { closed: boolean; setClosed: (closed: boolean) => void };
+  /**
+   * The zone being drawn on the Zona tab. It lives here because the map draws it; leaving the
+   * page drops it. null when nothing is being drawn.
+   */
+  zoneDraft: { draft: ZoneDraft | null; set: (draft: ZoneDraft | null) => void };
 }
 
 /** Everything the pages share. AppShell owns it, so it survives moving between pages. */

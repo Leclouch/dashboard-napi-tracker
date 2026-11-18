@@ -2,19 +2,24 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ApiError } from "@/lib/api";
 import { useShell } from "@/lib/live-context";
 import type { Assignment, Person, PersonKind } from "@/lib/types";
+import BraceletsTab from "./BraceletsTab";
+import { DANGER_BUTTON, errorText, INPUT, PRIMARY_BUTTON, SMALL_BUTTON, type Report } from "./data-master-ui";
 import PageSheet from "./PageSheet";
+import ZonesTab from "./ZonesTab";
 
-const INPUT =
-  "mt-1 block h-12 w-full rounded-xl border border-line bg-white px-3 text-base font-normal text-ink";
-const SMALL_BUTTON =
-  "min-h-10 squircle border border-line px-3 text-sm font-semibold text-ink hover:bg-ground disabled:opacity-60";
+type Tab = PersonKind | "bracelets" | "zones";
 
-const TABS: { kind: PersonKind; label: string; singular: string }[] = [
+const PERSON_TABS: { kind: PersonKind; label: string; singular: string }[] = [
   { kind: "inmates", label: "Warga binaan", singular: "warga binaan" },
   { kind: "guards", label: "Petugas", singular: "petugas" },
+];
+
+const TABS: { kind: Tab; label: string }[] = [
+  ...PERSON_TABS,
+  { kind: "bracelets", label: "Gelang" },
+  { kind: "zones", label: "Zona" },
 ];
 
 /** Single spaces, no padding: "  Budi   Santoso " and "Budi Santoso" are the same name. */
@@ -35,13 +40,6 @@ function dutyText(kind: PersonKind, duties: Assignment[]): string {
   const labels = duties.map((a) => a.deviceLabel).join(", ");
   return kind === "inmates" ? `Sedang bertugas, gelang ${labels}` : `Mengawasi ${duties.length} gelang: ${labels}`;
 }
-
-function errorText(error: unknown, conflict?: string): string {
-  if (conflict && error instanceof ApiError && error.status === 409) return conflict;
-  return error instanceof Error ? error.message : "Terjadi kesalahan";
-}
-
-type Report = (message: string | null, failed?: string) => void;
 
 function PersonRow({
   kind,
@@ -142,7 +140,7 @@ function PersonRow({
                 `${person.name} masih punya penugasan terbuka. Akhiri penugasan itu dulu.`,
               )
             }
-            className="min-h-10 squircle bg-[#b91c1c] px-4 text-sm font-semibold text-white hover:bg-[#8f1414] disabled:opacity-60"
+            className={DANGER_BUTTON}
           >
             Ya, nonaktifkan
           </button>
@@ -187,12 +185,18 @@ function PersonRow({
   );
 }
 
-/** Warga binaan and petugas: add, fix a name, take out of use. Open to every staff member. */
+/**
+ * Warga binaan and petugas (add, fix a name, take out of use: every staff member), gelang and
+ * zona (everyone sees them, a superadmin changes them).
+ */
 export default function DataMasterSheet() {
-  const { live } = useShell();
-  const { api, openAssignments } = live;
+  const { live, zoneDraft } = useShell();
+  const { api, openAssignments, zones } = live;
 
-  const [kind, setKind] = useState<PersonKind>("inmates");
+  const [tabKind, setTabKind] = useState<Tab>("inmates");
+  // The people form below needs a person kind; it only renders on the person tabs.
+  const kind: PersonKind = tabKind === "guards" ? "guards" : "inmates";
+  const onPersonTab = tabKind === "inmates" || tabKind === "guards";
   const [lists, setLists] = useState<Record<PersonKind, Person[]>>({ inmates: [], guards: [] });
   const [loaded, setLoaded] = useState(false);
   const [newName, setNewName] = useState("");
@@ -233,7 +237,13 @@ export default function DataMasterSheet() {
     }
   };
 
-  const tab = TABS.find((t) => t.kind === kind)!;
+  const tab = PERSON_TABS.find((t) => t.kind === kind)!;
+  const countFor = (t: Tab): number | null =>
+    t === "inmates" || t === "guards"
+      ? lists[t].filter((p) => p.status === "active").length
+      : t === "zones"
+        ? zones.filter((z) => z.status === "active").length
+        : null;
   const people = lists[kind];
   const query = search.trim().toLowerCase();
   const visible = people.filter(
@@ -275,132 +285,147 @@ export default function DataMasterSheet() {
           {done && <p className="mt-3 rounded-xl bg-[#e3f4e8] px-4 py-2 text-sm text-[#115c2d]">{done}</p>}
         </div>
 
-        <div role="tablist" className="mt-4 flex gap-1">
-          {TABS.map((t) => (
-            <button
-              key={t.kind}
-              type="button"
-              role="tab"
-              aria-selected={kind === t.kind}
-              onClick={() => {
-                setKind(t.kind);
-                setDuplicate(null);
-                setSearch("");
-              }}
-              className={`min-h-10 squircle px-4 text-sm font-semibold ${
-                kind === t.kind ? "bg-brand text-white" : "text-ink hover:bg-ground"
-              }`}
-            >
-              {t.label} ({lists[t.kind].filter((p) => p.status === "active").length})
-            </button>
-          ))}
+        <div role="tablist" className="mt-4 flex flex-wrap gap-1">
+          {TABS.map((t) => {
+            const count = countFor(t.kind);
+            return (
+              <button
+                key={t.kind}
+                type="button"
+                role="tab"
+                aria-selected={tabKind === t.kind}
+                onClick={() => {
+                  setTabKind(t.kind);
+                  setDuplicate(null);
+                  setSearch("");
+                  setError(null);
+                  setDone(null);
+                  // An unsaved zone outline only makes sense next to its form.
+                  if (t.kind !== "zones") zoneDraft.set(null);
+                }}
+                className={`min-h-10 squircle px-4 text-sm font-semibold ${
+                  tabKind === t.kind ? "bg-brand text-white" : "text-ink hover:bg-ground"
+                }`}
+              >
+                {t.label}
+                {count !== null && ` (${count})`}
+              </button>
+            );
+          })}
         </div>
 
-        <form
-          className="mt-4 space-y-2"
-          onSubmit={(event: FormEvent) => {
-            event.preventDefault();
-            void add(false);
-          }}
-        >
-          <label className="block text-sm font-semibold text-ink">
-            Tambah {tab.singular}
-            <input
-              value={newName}
-              onChange={(e) => {
-                setNewName(e.target.value);
-                setDuplicate(null);
+        {tabKind === "bracelets" && <BraceletsTab onReport={show} />}
+        {tabKind === "zones" && <ZonesTab onReport={show} />}
+
+        {onPersonTab && (
+          <>
+            <form
+              className="mt-4 space-y-2"
+              onSubmit={(event: FormEvent) => {
+                event.preventDefault();
+                void add(false);
               }}
-              maxLength={200}
-              placeholder="Nama lengkap"
-              className={INPUT}
-            />
-          </label>
-
-          {duplicate ? (
-            <div className="rounded-xl bg-warn-tint px-4 py-3 text-sm text-[#7a3a04]">
-              <p className="font-semibold">
-                Nama ini sudah ada di daftar{duplicate.status === "inactive" ? " (nonaktif)" : ""}:{" "}
-                {duplicate.name}.
-              </p>
-              <p className="mt-1">
-                {duplicate.status === "inactive"
-                  ? "Jika orangnya sama, gunakan Aktifkan kembali di daftar. "
-                  : "Jika orangnya sama, jangan ditambahkan lagi. "}
-                Tambahkan hanya jika ini orang yang berbeda dengan nama yang sama.
-              </p>
-              <div className="mt-2 flex gap-2">
-                <button type="button" onClick={() => setDuplicate(null)} className={SMALL_BUTTON}>
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void add(true)}
-                  className="min-h-10 squircle bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
-                >
-                  Tetap tambahkan
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="submit"
-              disabled={busy || !normalise(newName)}
-              className="min-h-12 w-full squircle bg-brand px-4 font-bold text-white hover:bg-brand-dark disabled:opacity-50 md:w-auto"
             >
-              {busy ? "Menyimpan…" : "Tambah"}
-            </button>
-          )}
-        </form>
-
-        <section className="mt-6">
-          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-            <h3 className="text-base font-bold text-ink">
-              Daftar {tab.singular} ({visible.length})
-            </h3>
-            {inactiveCount > 0 && (
-              <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <label className="block text-sm font-semibold text-ink">
+                Tambah {tab.singular}
                 <input
-                  type="checkbox"
-                  checked={showInactive}
-                  onChange={(e) => setShowInactive(e.target.checked)}
-                  className="h-4 w-4"
+                  value={newName}
+                  onChange={(e) => {
+                    setNewName(e.target.value);
+                    setDuplicate(null);
+                  }}
+                  maxLength={200}
+                  placeholder="Nama lengkap"
+                  className={INPUT}
                 />
-                Tampilkan yang nonaktif ({inactiveCount})
               </label>
-            )}
-          </div>
 
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama"
-            aria-label={`Cari ${tab.singular}`}
-            className={INPUT}
-          />
+              {duplicate ? (
+                <div className="rounded-xl bg-warn-tint px-4 py-3 text-sm text-[#7a3a04]">
+                  <p className="font-semibold">
+                    Nama ini sudah ada di daftar{duplicate.status === "inactive" ? " (nonaktif)" : ""}:{" "}
+                    {duplicate.name}.
+                  </p>
+                  <p className="mt-1">
+                    {duplicate.status === "inactive"
+                      ? "Jika orangnya sama, gunakan Aktifkan kembali di daftar. "
+                      : "Jika orangnya sama, jangan ditambahkan lagi. "}
+                    Tambahkan hanya jika ini orang yang berbeda dengan nama yang sama.
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={() => setDuplicate(null)} className={SMALL_BUTTON}>
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void add(true)}
+                      className="min-h-10 squircle bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+                    >
+                      Tetap tambahkan
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={busy || !normalise(newName)}
+                  className={PRIMARY_BUTTON}
+                >
+                  {busy ? "Menyimpan…" : "Tambah"}
+                </button>
+              )}
+            </form>
 
-          {!loaded && !error ? (
-            <p className="mt-3 text-sm text-ink-soft">Memuat…</p>
-          ) : visible.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-soft">
-              {query ? "Tidak ada nama yang cocok." : `Belum ada data ${tab.singular}.`}
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {visible.map((person) => (
-                <PersonRow
-                  key={person.id}
-                  kind={kind}
-                  person={person}
-                  duties={dutiesOf(kind, person, openAssignments)}
-                  onChanged={show}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
+            <section className="mt-6">
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+                <h3 className="text-base font-bold text-ink">
+                  Daftar {tab.singular} ({visible.length})
+                </h3>
+                {inactiveCount > 0 && (
+                  <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <input
+                      type="checkbox"
+                      checked={showInactive}
+                      onChange={(e) => setShowInactive(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    Tampilkan yang nonaktif ({inactiveCount})
+                  </label>
+                )}
+              </div>
+
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama"
+                aria-label={`Cari ${tab.singular}`}
+                className={INPUT}
+              />
+
+              {!loaded && !error ? (
+                <p className="mt-3 text-sm text-ink-soft">Memuat…</p>
+              ) : visible.length === 0 ? (
+                <p className="mt-3 text-sm text-ink-soft">
+                  {query ? "Tidak ada nama yang cocok." : `Belum ada data ${tab.singular}.`}
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {visible.map((person) => (
+                    <PersonRow
+                      key={person.id}
+                      kind={kind}
+                      person={person}
+                      duties={dutiesOf(kind, person, openAssignments)}
+                      onChanged={show}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </PageSheet>
   );

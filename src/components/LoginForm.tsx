@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import lapasPhoto from "../../assets/IMG-20220211-WA0010-1.jpg";
 import { Api, ApiError } from "@/lib/api";
 import { checkSession } from "@/lib/session";
 
@@ -31,8 +33,22 @@ function messageFor(error: unknown, wrong: string): string {
 
 function Card({ children }: { children: ReactNode }) {
   return (
-    <main className="flex flex-1 items-center justify-center bg-brand p-4">
-      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6">
+    // `isolate` keeps the photo's negative z-index inside <main> instead of behind the page.
+    <main className="relative isolate flex flex-1 items-center justify-center overflow-hidden bg-brand p-4">
+      {/* Decorative, so empty alt. A static import lets Next.js size it and add a blurred
+          placeholder; `preload` because it is the largest thing on the login page. */}
+      <Image
+        src={lapasPhoto}
+        alt=""
+        fill
+        sizes="100vw"
+        placeholder="blur"
+        preload
+        className="-z-10 object-cover"
+      />
+      {/* Darkens the photo so the white card stands out and the page stays calm. */}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-black/40" />
+      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 shadow-xl">
         <div>
           <h1 className="text-2xl font-extrabold text-brand">Gelang GPS</h1>
           <p className="text-base text-ink-soft">Pemantauan warga binaan, Lapas Cebongan</p>
