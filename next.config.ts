@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Lets coding agents apply security-only Next.js upgrades.
+    agentUpgrade: "security",
+  },
   turbopack: {
     // Pin the root to this folder: a stray lockfile higher up (e.g. D:\yarn.lock) would
     // otherwise make Next.js guess the wrong project root.
