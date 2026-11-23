@@ -62,8 +62,10 @@ so explain what you change and why.
 - Gelang tab (`BraceletsTab.tsx`): everyone sees the list; a superadmin adds (shows the config.h to copy
   plus the EMQX checklist; the broker user is still made by hand), sees the config.h again, retires and
   reactivates. No rename: the label is the MQTT topic and the EMQX username in the firmware.
-- Zona tab (`ZonesTab.tsx`): everyone sees the list; a superadmin adds, edits (name, both distances,
-  the outline) and retires. The outline is drawn on the shared map: the draft (`src/lib/zone-draft.ts`,
+- Zona tab (`ZonesTab.tsx`): every officer adds and edits zones (name, both distances, the outline;
+  decided 2026-11-20, the audit log names who changed what); only a superadmin retires and
+  reactivates one. Every change is also posted to the staff Telegram group by the backend, with a
+  warning when the zone became more lenient; the page says so before saving. Each row shows the area. The outline is drawn on the shared map: the draft (`src/lib/zone-draft.ts`,
   pure: corners [lng, lat], open ring, undo history) lives in the shell (`zoneDraft`), because MapView
   draws it. A click adds a corner into the nearest edge, a corner drags, a click on a corner removes
   it (never below 3). Leaving the page or the tab drops the draft. On a phone the sheet closes to draw
@@ -75,10 +77,24 @@ so explain what you change and why.
   calls `reloadZones`, other screens see it on their next reconnect. /admin stays as a fallback for now.
 - Riwayat (`/riwayat`, `HistorySheet.tsx`, pure summary in `src/lib/history.ts`): past alerts and past
   assignments for a period, read-only, open to all staff. Dates are WIB days (`wibDay` in format.ts),
-  both ends included, default the last 7 days; the backend returns at most 200 rows and the page says
-  so when it hits that. Each alert shows who held the bracelet when it opened (the backend joins
-  assignments by time), how long it lasted and how fast staff acknowledged it. Not built: replaying a
-  person's movement for a past period (needs a per-bracelet date-range fixes endpoint) and export.
+  both ends included, default the last 7 days; the page loads at most 200 rows and says so when it
+  hits that. Each alert shows who held the bracelet when it opened (the backend joins assignments by
+  time), how long it lasted and how fast staff acknowledged it.
+- Replay (`src/lib/replay.ts` pure, `use-replay.ts`, `ReplayBar.tsx`, `ReplayLayer` in MapView): "Lihat
+  jejak di peta" on every Riwayat row. An assignment replays start to end (to now while it runs); an
+  alert replays the assignment it happened in with the cursor on the alert (the backend's alert list
+  carries assignmentStartedAt/EndedAt), or half an hour either side without one. Longer than 24 h (the
+  backend's GET /fixes/range limit) is cut: around the alert, else the last 24 h, and the bar says so.
+  The path is solid up to the cursor and faint after, coloured by status; a slider steps through the
+  reported points, play moves the cursor in time at 10x, 60x or 300x (ticks every 100 ms, not every
+  frame, so the whole shell doesn't re-render 60 times a second). The request lives in the shell
+  (`replay`); leaving the page stops it, and the live trail is hidden meanwhile. On a phone the sheet
+  closes and the bar sits under the status card; on a desktop it sits between the sheet and the alert
+  panel. Fixes older than the backend's FIX_RETENTION_DAYS (default 90) are gone: the bar says so.
+- Export ("Unduh CSV", `src/lib/history-csv.ts` pure): the current tab and period, with the page's
+  search and type filter, fetched again with limit 5000. Semicolons and a UTF-8 byte order mark so
+  Excel with Indonesian settings opens it in columns; WIB times as "2026-11-18 08:05:09"; minutes with
+  a decimal comma; text starting with = + - @ gets a leading apostrophe so Excel never runs it.
 - Pengaturan (`/pengaturan`, `SettingsSheet.tsx`, rules in `src/lib/settings.ts`): report intervals per
   state, signal-lost threshold, and the debounce counts. Everyone can read it, only a superadmin can
   edit (the backend answers 403 otherwise). Saving asks first and lists "from -> to", then sends only

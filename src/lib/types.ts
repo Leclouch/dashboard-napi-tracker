@@ -37,6 +37,20 @@ export interface Trail {
   points: TrailPoint[];
 }
 
+/** A point of a past path (GET /fixes/range): also how far outside the zone it was. */
+export interface ReplayPoint extends TrailPoint {
+  distanceOutsideMeters: number | null;
+}
+
+/** One bracelet's path over a past period, oldest point first. */
+export interface ReplayPath {
+  braceletId: number;
+  deviceLabel: string;
+  points: ReplayPoint[];
+  /** The backend has more points in the period than it sends (10 000); only the earliest came. */
+  truncated: boolean;
+}
+
 export interface Episode {
   id: number;
   braceletId: number;
@@ -53,6 +67,9 @@ export interface Episode {
   /** Who held the bracelet when this opened. Only on lists (GET /alerts), not on pushed events. */
   inmateName?: string | null;
   guardName?: string | null;
+  /** That assignment's window (lists only), so Riwayat can replay the whole shift. */
+  assignmentStartedAt?: string | null;
+  assignmentEndedAt?: string | null;
 }
 
 export interface EpisodeTransition {
@@ -158,6 +175,8 @@ export interface Zone extends ZoneInput {
   status: "active" | "inactive";
   /** Bracelets handed out to this zone right now. */
   openAssignments: number;
+  /** Area inside the outline, m². */
+  areaSquareMeters: number;
   createdAt: string;
 }
 

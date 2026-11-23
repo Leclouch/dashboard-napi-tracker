@@ -16,7 +16,10 @@ import NavBar from "./NavBar";
 import PhoneSheet from "./PhoneSheet";
 import StatusCard from "./StatusCard";
 import TrailRange from "./TrailRange";
+import ReplayBar from "./ReplayBar";
 import ZoneDrawBar from "./ZoneDrawBar";
+import type { ReplayRequest } from "@/lib/replay";
+import { useReplayPath } from "@/lib/use-replay";
 import type { ZoneDraft } from "@/lib/zone-draft";
 
 // Leaflet needs `window`, so the map is never prerendered on the server.
@@ -61,6 +64,11 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
   const [phoneClosedOn, setPhoneClosedOn] = useState<ReadonlySet<string> | null>(null);
   const [sheetPath, setSheetPath] = useState(pathname);
   const [zoneDraft, setZoneDraft] = useState<ZoneDraft | null>(null);
+  const [replayRequest, setReplayRequest] = useState<ReplayRequest | null>(null);
+  /** The replay cursor, as a time (ms). The bar moves it; the map draws the marker there. */
+  const [replayAt, setReplayAt] = useState(0);
+  const replayLoad = useReplayPath(live.api, replayRequest);
+  const replayPoints = replayLoad?.state === "ready" ? replayLoad.path.points : null;
 
   const tally = tallyBracelets(live.openAssignments, live.openAlerts, live.fixes);
   const situation = describeSituation({
@@ -82,8 +90,9 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
   if (pathname !== sheetPath) {
     setSheetPath(pathname);
     setPhoneClosedOn(null);
-    // The zone editor unmounts with its page, so its unsaved outline goes too.
+    // The zone editor unmounts with its page, so its unsaved outline goes too; so does a replay.
     setZoneDraft(null);
+    setReplayRequest(null);
   } else if (phoneClosedOn !== null && onMonitor && !unseenKeys.every((key) => phoneClosedOn.has(key))) {
     setPhoneClosedOn(null);
   }
@@ -116,8 +125,21 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
         setClosed: (closed) => setPhoneClosedOn(closed ? new Set(unseenKeys) : null),
       },
       zoneDraft: { draft: zoneDraft, set: setZoneDraft },
+      replay: {
+        request: replayRequest,
+        start: (request) => {
+          setReplayRequest(request);
+          setReplayAt(Date.parse(request.startAt));
+          // The sheet covers the map on a phone; on a desktop this changes nothing visible.
+          setPhoneClosedOn(new Set(unseenKeys));
+        },
+        stop: () => {
+          setReplayRequest(null);
+          setPhoneClosedOn(null);
+        },
+      },
     }),
-    [live, alarm, now, selection, pathname, router, me, phoneClosed, unseenKeys, zoneDraft],
+    [live, alarm, now, selection, pathname, router, me, phoneClosed, unseenKeys, zoneDraft, replayRequest],
   );
 
   return (
@@ -131,7 +153,9 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
           assignments={live.openAssignments}
           now={now}
           selection={selection}
-          trail={trail}
+          // A replay takes the map's attention; the live trail would only confuse it.
+          trail={replayRequest ? [] : trail}
+          replay={replayPoints ? { points: replayPoints, at: replayAt } : null}
           sheetClosed={phoneClosed}
           onSelect={shell.select}
           onClearSelection={() => setSelection(null)}
@@ -142,6 +166,16 @@ export default function AppShell({ me, children }: { me: Me; children: ReactNode
 
       <NavBar />
       {onMonitor && selection && <TrailRange value={trailMinutes} onChange={setTrailMinutes} />}
+      {replayRequest && replayLoad && (
+        <ReplayBar
+          request={replayRequest}
+          load={replayLoad}
+          at={replayAt}
+          onSeek={setReplayAt}
+          onClose={shell.replay.stop}
+          phoneVisible={phoneClosed}
+        />
+      )}
       {zoneDraft && phoneClosed && (
         <ZoneDrawBar
           draft={zoneDraft}

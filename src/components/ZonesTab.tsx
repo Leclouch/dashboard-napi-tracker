@@ -32,6 +32,13 @@ function metersText(zone: Pick<Zone, "warnMeters" | "alertMeters">): string {
   return `Toleransi GPS ${zone.warnMeters} m, keluar zona setelah ${zone.alertMeters} m`;
 }
 
+/** "850 m²" for a small zone, "1,25 ha" from one hectare up (Indonesian decimal comma). */
+function areaText(squareMeters: number): string {
+  return squareMeters < 10_000
+    ? `${Math.round(squareMeters).toLocaleString("id-ID")} m²`
+    : `${(squareMeters / 10_000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} ha`;
+}
+
 /** The form's numbers, or what's wrong with them. Mirrors the backend's checks. */
 function readForm(name: string, warn: string, alert: string): { input: Omit<ZoneInput, "boundary"> } | { problem: string } {
   const trimmed = name.trim().replace(/\s+/g, " ");
@@ -241,7 +248,8 @@ function ZoneEditor({
             {zone.openAssignments > 0
               ? `${zone.openAssignments} gelang sedang memakai zona ini. Mulai posisi berikutnya, mereka diperiksa dengan batas yang baru, jadi status dan peringatan bisa langsung berubah.`
               : "Tidak ada gelang yang sedang memakai zona ini."}{" "}
-            Posisi yang sudah tercatat tetap dengan status lamanya.
+            Posisi yang sudah tercatat tetap dengan status lamanya. Perubahan ini juga dikirim ke grup
+            Telegram staf, dengan nama Anda.
           </p>
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setConfirming(null)} className={SMALL_BUTTON}>
@@ -269,10 +277,14 @@ function ZoneEditor({
 function ZoneRow({
   zone,
   canEdit,
+  canRetire,
   onReport,
 }: {
   zone: Zone;
+  /** Every officer may reshape a zone (false only while another zone's editor is open). */
   canEdit: boolean;
+  /** Retiring and reactivating stay with superadmins. */
+  canRetire: boolean;
   onReport: Report;
 }) {
   const { live, zoneDraft } = useShell();
@@ -303,10 +315,10 @@ function ZoneRow({
         {inactive ? "Nonaktif" : inUse ? `Dipakai ${zone.openAssignments} gelang` : "Aktif, tidak dipakai"}
       </p>
       <p className="text-sm text-ink-soft">
-        {metersText(zone)} · {zone.boundary.coordinates[0].length - 1} titik
+        {metersText(zone)} · {areaText(zone.areaSquareMeters)}, {zone.boundary.coordinates[0].length - 1} titik
       </p>
 
-      {canEdit && confirming && (
+      {canEdit && canRetire && confirming && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="mr-auto text-sm font-semibold text-ink">
             {zone.name} tidak bisa dipilih lagi untuk penugasan baru dan tidak tampil di peta. Riwayat tetap tersimpan.
@@ -342,7 +354,7 @@ function ZoneRow({
               Ubah
             </button>
           )}
-          {inactive ? (
+          {!canRetire ? null : inactive ? (
             <button
               type="button"
               disabled={busy}
@@ -370,11 +382,14 @@ function ZoneRow({
   );
 }
 
-/** Zones: everyone can see them; only a superadmin adds, reshapes or retires one. */
+/**
+ * Zones: every officer can add and reshape one (they set up the work sites; the audit log names
+ * who changed what). Retiring and reactivating stay with superadmins.
+ */
 export default function ZonesTab({ onReport }: { onReport: Report }) {
   const { live, me, zoneDraft } = useShell();
   const { zones, loaded } = live;
-  const canEdit = me.role === "superadmin";
+  const canRetire = me.role === "superadmin";
   const [showInactive, setShowInactive] = useState(false);
   const draft = zoneDraft.draft;
   const editingZone = draft?.zoneId == null ? null : (zones.find((z) => z.id === draft.zoneId) ?? null);
@@ -384,12 +399,15 @@ export default function ZonesTab({ onReport }: { onReport: Report }) {
 
   return (
     <>
-      {!canEdit && (
-        <p className="mt-4 text-sm text-ink-soft">Hanya superadmin yang bisa menambah atau mengubah zona.</p>
+      {!canRetire && !draft && (
+        <p className="mt-4 text-sm text-ink-soft">
+          Semua petugas bisa menambah dan mengubah zona; setiap perubahan dikirim ke grup Telegram staf.
+          Menonaktifkan zona hanya bisa oleh superadmin.
+        </p>
       )}
 
       {/* A draft for a zone that isn't in the list (yet) must not turn into a new zone. */}
-      {canEdit && draft && (draft.zoneId === null || editingZone) && (
+      {draft && (draft.zoneId === null || editingZone) && (
         <ZoneEditor
           // A fresh form per zone, so one zone's name doesn't carry over into the next.
           key={draft.zoneId ?? "new"}
@@ -398,7 +416,7 @@ export default function ZonesTab({ onReport }: { onReport: Report }) {
           onReport={onReport}
         />
       )}
-      {canEdit && !draft && (
+      {!draft && (
         <button
           type="button"
           onClick={() => {
@@ -437,7 +455,8 @@ export default function ZonesTab({ onReport }: { onReport: Report }) {
                 key={zone.id}
                 zone={zone}
                 // One editor at a time: the map shows one draft.
-                canEdit={canEdit && !draft}
+                canEdit={!draft}
+                canRetire={canRetire}
                 onReport={onReport}
               />
             ))}

@@ -23,7 +23,8 @@ import { FIX_STATUS_LABEL, EPISODE_LABEL, formatAgo, formatDistance, formatTime 
 import { statusDotHtml } from "@/lib/glyph";
 import type { DisplayStatus, Selection } from "@/lib/status";
 import { runOpacity, spaceDots, trailDots, trailRuns, type TrailDot } from "@/lib/trail";
-import type { Assignment, Episode, Fix, FixStatus, TrailPoint, Zone } from "@/lib/types";
+import { pointIndexAt, statusRuns } from "@/lib/replay";
+import type { Assignment, Episode, Fix, FixStatus, ReplayPoint, TrailPoint, Zone } from "@/lib/types";
 import {
   addCorner,
   corner,
@@ -270,6 +271,66 @@ function FitToDraft({ draft, sheetClosed }: { draft: ZoneDraft | null; sheetClos
 }
 
 /**
+ * A past path from Riwayat: the part up to the cursor solid, the rest faint, coloured by status,
+ * and the bracelet's marker at the cursor. The map fits the whole path once when it loads.
+ */
+function ReplayLayer({ points, at, sheetClosed }: { points: ReplayPoint[]; at: number; sheetClosed: boolean }) {
+  const map = useMap();
+  const index = pointIndexAt(points, at);
+  const played = useMemo(() => statusRuns(points.slice(0, index + 1)), [points, index]);
+  const upcoming = useMemo(() => statusRuns(points.slice(index)), [points, index]);
+  const sheetClosedRef = useRef(sheetClosed);
+  useEffect(() => {
+    sheetClosedRef.current = sheetClosed;
+  }, [sheetClosed]);
+
+  useEffect(() => {
+    if (points.length === 0) return;
+    const covered = pageCoveredEdges(map, sheetClosedRef.current);
+    // The replay bar covers the top on a phone and the bottom on a desktop.
+    const desktop = window.matchMedia("(min-width: 1024px)").matches;
+    map.fitBounds(latLngBounds(points.map((p): LatLngTuple => [p.lat, p.lng])), {
+      paddingTopLeft: [covered.left + 40, covered.top + (desktop ? 40 : 180)],
+      paddingBottomRight: [covered.right + 40, covered.bottom + (desktop ? 190 : 40)],
+      maxZoom: 19,
+    });
+  }, [map, points]);
+
+  const point = points[index];
+  if (!point) return null;
+  return (
+    <>
+      {upcoming.map((run, i) => (
+        <Polyline
+          key={`u${i}`}
+          positions={run.positions}
+          pathOptions={{ color: TRAIL_COLOR[run.status], weight: 4, opacity: 0.3, interactive: false }}
+        />
+      ))}
+      {played.map((run, i) => (
+        <Polyline
+          key={`p${i}`}
+          positions={run.positions}
+          pathOptions={{
+            color: TRAIL_COLOR[run.status],
+            weight: 4,
+            opacity: 0.95,
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false,
+          }}
+        />
+      ))}
+      <Marker position={[point.lat, point.lng]} icon={statusIcon(point.status, true, false)} zIndexOffset={4000}>
+        <Tooltip className="bracelet-tooltip" direction="top" permanent>
+          {formatTime(point.recordedAt)}
+        </Tooltip>
+      </Marker>
+    </>
+  );
+}
+
+/**
  * The zone being drawn: its outline (dashed, so it reads as unsaved) and a square handle per
  * corner. Drag a handle to move the corner; click it to remove the corner.
  */
@@ -344,6 +405,8 @@ interface Props {
   selection: Selection | null;
   /** Path of the selected bracelet, oldest point first; empty when nothing is selected. */
   trail: TrailPoint[];
+  /** A past path replayed from Riwayat, with the cursor time; null when none is. */
+  replay: { points: ReplayPoint[]; at: number } | null;
   /** The phone's sheet is closed all the way, so more of the map is visible. */
   sheetClosed: boolean;
   onSelect: (braceletId: number) => void;
@@ -361,6 +424,7 @@ export default function MapView({
   now,
   selection,
   trail,
+  replay,
   sheetClosed,
   onSelect,
   onClearSelection,
@@ -458,6 +522,7 @@ export default function MapView({
       ))}
       <TrailDots dots={dots} />
       {zoneDraft && <DraftLayer draft={zoneDraft} onChange={onZoneDraftChange} />}
+      {replay && <ReplayLayer points={replay.points} at={replay.at} sheetClosed={sheetClosed} />}
 
       {fixes.map((fix) => {
         const alert = alertByBracelet.get(fix.braceletId);

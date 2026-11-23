@@ -6,6 +6,7 @@ import type { useLiveData } from "./use-live-data";
 import type { Selection } from "./status";
 import type { Me } from "./types";
 import type { ZoneDraft } from "./zone-draft";
+import type { ReplayRequest } from "./replay";
 
 export interface Shell {
   live: ReturnType<typeof useLiveData>;
@@ -26,6 +27,11 @@ export interface Shell {
    * page drops it. null when nothing is being drawn.
    */
   zoneDraft: { draft: ZoneDraft | null; set: (draft: ZoneDraft | null) => void };
+  /**
+   * A past path being replayed on the map, started from Riwayat. Leaving the page stops it.
+   * Starting one closes the phone's sheet, so the map shows.
+   */
+  replay: { request: ReplayRequest | null; start: (request: ReplayRequest) => void; stop: () => void };
 }
 
 /** Everything the pages share. AppShell owns it, so it survives moving between pages. */

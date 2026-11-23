@@ -12,6 +12,7 @@ import type {
   NewBracelet,
   Person,
   PersonKind,
+  ReplayPath,
   Settings,
   SettingsPatch,
   StaffAccount,
@@ -204,14 +205,23 @@ export class Api {
     return this.request("GET", "/assignments?open=true");
   }
 
-  /** Alerts that opened between two WIB days (YYYY-MM-DD, both included); newest 200. */
-  alertHistory(from: string, to: string): Promise<Episode[]> {
-    return this.request("GET", `/alerts?from=${from}&to=${to}`);
+  /**
+   * Alerts that opened between two WIB days (YYYY-MM-DD, both included); the newest `limit`
+   * (default 200, at most 5000 for an export).
+   */
+  alertHistory(from: string, to: string, limit = 200): Promise<Episode[]> {
+    return this.request("GET", `/alerts?from=${from}&to=${to}&limit=${limit}`);
   }
 
-  /** Assignments that were running at some point between two WIB days; newest 200. */
-  assignmentHistory(from: string, to: string): Promise<Assignment[]> {
-    return this.request("GET", `/assignments?from=${from}&to=${to}`);
+  /** Assignments that were running at some point between two WIB days; the newest `limit`. */
+  assignmentHistory(from: string, to: string, limit = 200): Promise<Assignment[]> {
+    return this.request("GET", `/assignments?from=${from}&to=${to}&limit=${limit}`);
+  }
+
+  /** One bracelet's path between two instants (ISO with offset, at most 24 h apart). */
+  fixRange(braceletId: number, from: string, to: string): Promise<ReplayPath> {
+    const query = new URLSearchParams({ braceletId: String(braceletId), from, to });
+    return this.request("GET", `/fixes/range?${query}`);
   }
 
   acknowledge(alertId: number): Promise<Episode> {
